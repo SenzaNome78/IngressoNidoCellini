@@ -274,7 +274,7 @@ void loop()
 		LcdPrintCentered("Buongiorno!", 0, true, lcd);
 		LcdPrintCentered("Per favore", 1, true, lcd);
 		LcdPrintCentered("Avvicini il badge", 2, true, lcd);
-		LcdPrintCentered("Grazie!oo", 3, true, lcd);
+		LcdPrintCentered("Grazie!", 3, true, lcd);
 		return;
 	}
 
