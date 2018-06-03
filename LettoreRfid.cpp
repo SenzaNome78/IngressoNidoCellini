@@ -31,7 +31,7 @@ LettoreRfid::LettoreRfid() :
 	//	mfrc522 = new MFRC522(SS_PIN, RST_PIN);
 	SPI.begin();
 	mfrc522.PCD_Init();   // Init MFRC522
-	NuovaRilevazione = true;
+	//NuovaRilevazione = true;
 }
 
 /***********************************************************************
@@ -41,7 +41,7 @@ LettoreRfid::LettoreRfid() :
  */
 bool LettoreRfid::BadgeRilevato()
 {
-	//resetMembers();
+	resetMembers();
 	if (mfrc522.PICC_IsNewCardPresent())
 	{
 		if (mfrc522.PICC_ReadCardSerial())
@@ -356,6 +356,18 @@ void LettoreRfid::setSessoUser(String sessoUser)
 bool LettoreRfid::isNuovaRilevazione()
 {
 	return NuovaRilevazione;
+}
+
+void LettoreRfid::CancellaSerialeOggi(String seriale)
+{
+	for (byte i = 0; i < MAX_USERS; i++)
+	{
+		if (strArrayUid[i] == seriale)
+		{
+			strArrayUid[i] = "";
+			return;
+		}
+	}
 }
 
 bool LettoreRfid::GetBadgeDaRegistrare()

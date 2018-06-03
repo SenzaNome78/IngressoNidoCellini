@@ -1,13 +1,8 @@
 #include <Arduino.h>
 #include <ESP8266HTTPClient.h>
 #include <ESP8266WiFi.h>
-#include <ESP8266WiFiType.h>
-#include <HardwareSerial.h>
-#include <include/wl_definitions.h>
 #include <LiquidCrystal_I2C.h>
-
 #include <SPI.h>
-#include <WString.h>
 #include "LettoreRfid.h"
 #include "IngressiNidoHelper.h"
 
@@ -16,6 +11,8 @@ LettoreRfid rfid;
 bool SendDataToWebServer(String userSerial);
 
 String prepareHtmlPage();
+
+bool AttivaModScrittura();
 
 // instanza per gestire l'lcd
 LiquidCrystal_I2C lcd(0x27, 20, 4);
@@ -30,6 +27,7 @@ const char passwordAP[] = "cellininido";	//password ap
 
 HTTPClient httpC;
 WiFiServer webServer(80); // Usiamo questo server per registrare nuovi bambini o educatori
+WiFiClient client;
 String NuovoUtenteHeader;
 
 
@@ -40,11 +38,12 @@ unsigned long timeAttesaBadge;
 String nome_nuovo_badge;
 String ruolo_nuovo_badge;
 String sesso_nuovo_badge;
+bool scritturaBadgeRiuscita = false;
 
 bool modScrittura = false;
-int tempoAttesaBadgeXScrittura;
+long tempoAttesaBadgeXScrittura;
 // RITARDO DI 3 SECONDO PER MINUTO
-const int tempoTotaleAttesaBadgeXScrittura = 120000;
+const long tempoTotaleAttesaBadgeXScrittura = 5000;
 
 void setup()
 {
@@ -86,78 +85,23 @@ void setup()
 	Serial.println(WiFi.localIP());
 	webServer.begin();
 	// **********Init WIFI STATION**************
-
-	// **********Init WIFI AP**************
-	//	Serial.println("");
-	//	Serial.print("Creazione AP con ssid: ");
-	//	Serial.println(ssidAP);
-	//
-	//	WiFi.mode(WiFiMode::WIFI_AP);
-	//
-	//	if (WiFi.softAP("cel", "123456789"))
-	//	{
-	//		Serial.println("AP attivo");
-	//	}
-	//	else
-	//	{
-	//		Serial.println("Ap non attivato");
-	//	}
-	////	WiFi.softAP(ssidAP);
-	//
-	//	Serial.println("");
-	//	Serial.println(WiFi.softAPIP());
-	//	Serial.println(WiFi.softAPmacAddress());
-	// **********Init WIFI AP**************
-
 }
 
 void loop()
 {
-
 	//*********** INIZIO MOD SCRITTURA ***********************************
 	// Se abbiamo attivatò la modalità scrittura, ci occupiamo di scrivere il nuovo badge
-	if (modScrittura)
-	{
 
-		Serial.println("MODALITA' scrittura Attivata");
-		while (tempoAttesaBadgeXScrittura > 0)
-		{
-			if (rfid.BadgeRilevato())
-			{
-				rfid.ScriviNuovoBadge(nome_nuovo_badge, ruolo_nuovo_badge, sesso_nuovo_badge);//
-				PlayBuzzer();
-
-				nome_nuovo_badge = "";
-				ruolo_nuovo_badge = "";
-				sesso_nuovo_badge = "";
-
-				modScrittura = false;
-				tempoAttesaBadgeXScrittura = tempoTotaleAttesaBadgeXScrittura;
-
-				break;
-			}
-			LcdPrintCentered("Avvicinare il badge", 0, true, lcd);
-			LcdPrintCentered("da registrare", 1, true, lcd);
-			LcdPrintCentered("entro un minuto", 2, true, lcd);
-			LcdPrintCentered(" ", 3, true, lcd);
-			tempoAttesaBadgeXScrittura -= 1000;
-			delay(1000);
-			//Serial.println(tempoAttesaBadgeXScrittura);
-
-		}
-		modScrittura = false;
-		tempoAttesaBadgeXScrittura = tempoTotaleAttesaBadgeXScrittura;
-
-		Serial.println("MODALITA' scrittura DISATTIVATA");
-	}
 
 	// Blocco che rimane in ascolto di un eventuale richiesta per un nuovo 
 	// badge dal server web
-	WiFiClient client = webServer.available();
+
+	client = webServer.available();
+
 	if (client)
 	{
 		Serial.println("\n[Client connected]");
-		if (client.connected() && !modScrittura)
+		if (client.connected() && modScrittura == false)
 		{
 			NuovoUtenteHeader = client.readStringUntil('\r');
 
@@ -168,17 +112,33 @@ void loop()
 			sesso_nuovo_badge = NuovoUtenteHeader.substring(NuovoUtenteHeader.indexOf("sesso=") + 6, NuovoUtenteHeader.indexOf("sesso=") + 7);
 			sesso_nuovo_badge = sesso_nuovo_badge.substring(0, 1);
 
-			//client.stop();
+			Serial.println(NuovoUtenteHeader);
+
 
 			Serial.println("[Client disonnected]");
 			if (nome_nuovo_badge != "" && ruolo_nuovo_badge != "" && sesso_nuovo_badge != "")
 			{
 				// i campi nuovo nome, ruolo e sesso contengono qualcosa, attiviamo la
 				// modalità scrittura e usciamo dal loop
+
+				scritturaBadgeRiuscita = false;
 				modScrittura = true;
+				AttivaModScrittura();
+				
+				//if (AttivaModScrittura())
+				//{
+				//	client.println("&successo=S");
+				//}
+				//else
+				//{
+				//	client.println("&successo=N");
+				//}
 				return;
 
 			}
+			delay(10);
+			client.stop();
+			scritturaBadgeRiuscita = false;
 		}
 	}
 	//*********** FINE MOD SCRITTURA ***********************************
@@ -214,9 +174,10 @@ void loop()
 
 			if (!SendDataToWebServer(rfid.getSeriale()))
 			{
+				rfid.CancellaSerialeOggi(rfid.getSeriale());
 				LcdPrintCentered("Errore comunicazione", 0, true, lcd);
-				LcdPrintCentered("col server. " + tmpSesso + ".", 1, true, lcd);
-				LcdPrintCentered("Per favore contattare", 2, true, lcd);
+				LcdPrintCentered("col server. Per fa-", 1, true, lcd);
+				LcdPrintCentered("vore contattare", 2, true, lcd);
 				LcdPrintCentered("l'amministratore", 3, true, lcd);
 			}
 			else
@@ -295,7 +256,7 @@ bool SendDataToWebServer(String userSerial)
 
 					   // *************** Usare GET ********************************************************
 	httpC.begin(
-		"http://192.168.0.2:80/NidoCellini/src/RegEntry.php?seriale="
+		"http://192.168.0.2:80/NidoCellini/src/php/RegEntry.php?seriale="
 		+ userSerial);
 	//Serial.print("[HTTP] GET...\n");
 	// start connection and send HTTP header
@@ -337,4 +298,72 @@ String prepareHtmlPage()
 		+ "<html>" + "Analog input:  " + String(analogRead(A0)) + "</html>"
 		+ "\n";
 	return htmlPage;
+}
+
+bool AttivaModScrittura()
+{
+	if (modScrittura)
+	{
+		Serial.println("MODALITA' scrittura Attivata");
+		while (tempoAttesaBadgeXScrittura > 0)
+		{
+			if (rfid.BadgeRilevato())
+			{
+				rfid.ScriviNuovoBadge(nome_nuovo_badge, ruolo_nuovo_badge, sesso_nuovo_badge);//
+				PlayBuzzer();
+
+				nome_nuovo_badge = "";
+				ruolo_nuovo_badge = "";
+				sesso_nuovo_badge = "";
+
+				modScrittura = false;
+				tempoAttesaBadgeXScrittura = tempoTotaleAttesaBadgeXScrittura;
+
+				scritturaBadgeRiuscita = true;
+
+
+				break;
+			}
+			LcdPrintCentered("Avvicinare il badge", 0, true, lcd);
+			LcdPrintCentered("da registrare", 1, true, lcd);
+			LcdPrintCentered("entro un minuto.", 2, true, lcd);
+			LcdPrintCentered("Grazie.", 3, true, lcd);
+			tempoAttesaBadgeXScrittura -= 200;
+			delay(200);
+		}
+
+		// Scrittura riuscita
+		if (scritturaBadgeRiuscita)
+		{
+			client.println("&successo=S");
+
+			delay(10);
+			client.stop();
+			LcdPrintCentered("Badge registrato.", 0, true, lcd);
+			LcdPrintCentered("Allontanarlo dal", 1, true, lcd);
+			LcdPrintCentered("lettore. Grazie e", 2, true, lcd);
+			LcdPrintCentered("buona giornata. ", 3, true, lcd);
+			delay(4000);
+		}
+		else
+		{
+			client.println("&successo=N");
+
+			delay(10);
+			client.stop();
+			LcdPrintCentered("Registrazione non", 0, true, lcd);
+			LcdPrintCentered("riuscita.", 1, true, lcd);
+			LcdPrintCentered("Si prega di", 2, true, lcd);
+			LcdPrintCentered("ritentare. ", 3, true, lcd);
+			delay(4000);
+		}
+		modScrittura = false;
+		
+		tempoAttesaBadgeXScrittura = tempoTotaleAttesaBadgeXScrittura;
+
+		rfid.CancellaSerialeOggi(rfid.getSeriale());
+
+		Serial.println("MODALITA' scrittura DISATTIVATA");
+		return scritturaBadgeRiuscita;
+	}
 }

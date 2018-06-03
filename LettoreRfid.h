@@ -5,8 +5,6 @@
  *      Author: David
  */
 
-#ifndef LETTORERFID_H_
-#define LETTORERFID_H_
 #include <Arduino.h>
 #include "IngressiNidoHelper.h"
 #include <MFRC522.h>
@@ -30,6 +28,7 @@ public:
 	String getSessoUser();
 
 	bool isNuovaRilevazione();
+	void CancellaSerialeOggi(String seriale);
 
 	String getSeriale()
 	{
@@ -69,10 +68,9 @@ private:
 	bool badgeDaRegistrare = false;
 
 
-	bool NuovaRilevazione;
+	bool NuovaRilevazione = false;
 	void setNuovaRilevazione(String tmpSerial);
 
 	void resetMembers();
 };
 
-#endif /* LETTORERFID_H_ */
