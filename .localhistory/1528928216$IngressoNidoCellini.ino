@@ -32,7 +32,7 @@ String NuovoUtenteHeader;	// stringa che contiene l'header del messagio get in c
 
 // Variabili per scrittura badge se uso Delay
 long tempoAttesaBadgeXScrittura;
-const long tempoTotaleAttesaBadgeXScrittura = 5000; // RITARDO DI 3 SECONDO PER MINUTO
+const long tempoTotaleAttesaBadgeXScrittura = 60000; // RITARDO DI 3 SECONDO PER MINUTO
 
 String nome_nuovo_badge;
 String ruolo_nuovo_badge;
@@ -96,8 +96,6 @@ void loop()
 
 		if (client.connected() && modScrittura == false)
 		{
-			NuovoUtenteHeader = client.readStringUntil('\r');
-
 			nome_nuovo_badge = NuovoUtenteHeader.substring(NuovoUtenteHeader.indexOf("nome=") + 5, NuovoUtenteHeader.indexOf('&'));
 			nome_nuovo_badge.trim();
 			ruolo_nuovo_badge = NuovoUtenteHeader.substring(NuovoUtenteHeader.indexOf("ruolo=") + 6, NuovoUtenteHeader.indexOf("ruolo=") + 7);
@@ -112,7 +110,6 @@ void loop()
 
 				modScrittura = true;
 				AttivaModScrittura();
-
 
 				return;
 
@@ -154,7 +151,7 @@ void loop()
 				tmpSesso = "stata inserita";
 			}
 
-			if (!SendDataToWebServer(rfid.getSeriale(), rfid.getRuoloUser(), true))
+			if (!SendDataToWebServer(rfid.getSeriale(), rfid.getRuoloUser()))
 			{
 				rfid.CancellaSerialeOggi(rfid.getSeriale());
 				LcdPrintCentered("Errore comunicazione", 0, true, lcd);
@@ -167,7 +164,7 @@ void loop()
 				LcdPrintCentered(rfid.getNomeUser(), 0, true, lcd);
 				LcdPrintCentered("e' " + tmpSesso + ".", 1, true, lcd);
 				LcdPrintCentered("Grazie e", 2, true, lcd);
-				LcdPrintCentered("buona giornata.", 3, true, lcd);
+				LcdPrintCentered("Buona giornata.", 3, true, lcd);
 			}
 
 
@@ -177,19 +174,6 @@ void loop()
 		{
 			PlayBuzzer(); // Riproduce un suono
 
-			//if (rfid.getSessoUser() == "M")
-			//{
-			//	tmpSesso = "stato inserito";
-			//}
-			//else if (rfid.getSessoUser() == "F")
-			//{
-			//	tmpSesso = "stata inserita";
-			//}
-			//LcdPrintCentered(rfid.getNomeUser(), 0, true, lcd);
-			//LcdPrintCentered("era " + tmpSesso + ".", 1, true, lcd);
-			//LcdPrintCentered("Grazie e", 2, true, lcd);
-			//LcdPrintCentered("Buona giornata.", 3, true, lcd);
-
 			if (rfid.getSessoUser() == "M")
 			{
 				tmpSesso = "stato inserito";
@@ -198,34 +182,10 @@ void loop()
 			{
 				tmpSesso = "stata inserita";
 			}
-			if (rfid.getRuoloUser() == "B")
-			{
-				tmpRuolo = "stato inserito";
-			}
-			else if (rfid.getRuoloUser() == "E")
-			{
-				tmpRuolo = "stata inserita";
-			}
-
-
-			if (!SendDataToWebServer(rfid.getSeriale(), rfid.getRuoloUser(), false))
-			{
-				rfid.CancellaSerialeOggi(rfid.getSeriale());
-				LcdPrintCentered("Errore comunicazione", 0, true, lcd);
-				LcdPrintCentered("col server. Per fa-", 1, true, lcd);
-				LcdPrintCentered("vore contattare", 2, true, lcd);
-				LcdPrintCentered("l'amministratore", 3, true, lcd);
-			}
-			else
-			{
-
-				rfid.CancellaSerialeOggi(rfid.getSeriale());
-				LcdPrintCentered("Ciao", 0, true, lcd);
-				LcdPrintCentered(rfid.getNomeUser(), 1, true, lcd);
-				LcdPrintCentered("A presto e", 2, true, lcd);
-				LcdPrintCentered("buona giornata!", 3, true, lcd);
-			}
-
+			LcdPrintCentered(rfid.getNomeUser(), 0, true, lcd);
+			LcdPrintCentered("era " + tmpSesso + ".", 1, true, lcd);
+			LcdPrintCentered("Grazie e", 2, true, lcd);
+			LcdPrintCentered("Buona giornata.", 3, true, lcd);
 
 			delay(lcdPause);
 		}
@@ -246,7 +206,7 @@ Invia il seriale al web server che si occuperà di registrarne l'entrata nel data
 userSerial: il seriale da inviare
 la funzione ritorna true se l'invio è andato a buon fine, false se c'e' stato qualche problema
 */
-bool SendDataToWebServer(String userSerial, String ruolo, bool entrata)
+bool SendDataToWebServer(String userSerial, String ruolo)
 {
 	int httpCode; // Ci serve per verificare che l'invio sia andato a buon fine
 	userSerial.trim(); // Eliminiamo eventuali spazi esterni della stringa
@@ -255,8 +215,8 @@ bool SendDataToWebServer(String userSerial, String ruolo, bool entrata)
 	// *************** Usare GET ********************************************************
 	String tmpStr = "http://192.168.0.2:80/NidoCellini/src/php/RegEntry.php?seriale="
 	+ userSerial
-	+"&ruolo="+ ruolo+ "&entrata=" + String(entrata);
-
+	+"&ruolo="
+		+ ruolo;
 	Serial.println(tmpStr);
 	httpC.begin(tmpStr); // Apriamo una connessione http verso il server
 
@@ -269,11 +229,9 @@ bool SendDataToWebServer(String userSerial, String ruolo, bool entrata)
 		if (httpCode == HTTP_CODE_OK)
 		{
 			// Se tutto è andato bene restituiamo true
-			httpC.end();
 			return true;
 		}
 		// Altrimenti false
-		httpC.end();
 		return false;
 	}
 	else
@@ -310,12 +268,9 @@ bool AttivaModScrittura()
 				
 				if (scritturaBadgeRiuscita)
 				{
-					Serial.println(rfid.getSeriale());
-					msgDiRitorno = String("&S=Registrato&seriale=") + rfid.getSeriale();
+					msgDiRitorno = "&S=Registrato";
 					client.print(msgDiRitorno);
-
-					delay(200);
-					client.flush();
+					delay(50);
 					client.stop();
 
 					LcdPrintCentered("Badge registrato.", 0, true, lcd);
@@ -329,7 +284,6 @@ bool AttivaModScrittura()
 					msgDiRitorno = "&F=ScriviNuovoBadge";
 					client.print(msgDiRitorno);
 					delay(50);
-					client.flush();
 					client.stop();
 
 					LcdPrintCentered("Errore registrazione", 0, true, lcd);
@@ -357,9 +311,8 @@ bool AttivaModScrittura()
 					delay(50);
 					clientInterr.stop();
 					msgDiRitorno = "&F=Stop";
-					client.print(msgDiRitorno); // Interrotto dall'utente
+					client.print(msgDiRitorno); // Interruzione per scadenza tempo
 					delay(50);
-					client.flush();
 					client.stop();
 					LcdPrintCentered("Registrazione badge", 0, true, lcd);
 					LcdPrintCentered("interrotta", 1, true, lcd);
@@ -383,7 +336,6 @@ bool AttivaModScrittura()
 			msgDiRitorno = "&F=Timeout";
 			client.print(msgDiRitorno); // Interruzione per scadenza tempo
 			delay(50);
-			client.flush();
 			client.stop();
 
 			LcdPrintCentered("Tempo per registrare", 0, true, lcd);
@@ -404,10 +356,4 @@ bool AttivaModScrittura()
 
 		return scritturaBadgeRiuscita;
 	}
-	client.flush();
-	client.stop();
-
-	clientInterr.flush();
-	clientInterr.stop();
-
 }

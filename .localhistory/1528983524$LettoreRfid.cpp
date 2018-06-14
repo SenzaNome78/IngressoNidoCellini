@@ -49,7 +49,12 @@ bool LettoreRfid::BadgeRilevato()
 			nomeUser = LeggiBlocco(bloccoNome);
 			ruoloUser = LeggiBlocco(bloccoRuolo);
 			sessoUser = LeggiBlocco(bloccoSesso);
-			
+			//ruoloUser = LeggiBlocco(bloccoRuolo);
+			/*Serial.print("In BadgeRilevato - nome: ");
+			Serial.println(nomeUser);
+			Serial.print("In BadgeRilevato - ruolo: ");
+			Serial.println(ruoloUser);*/
+
 			// Nella stringa tmpSerial mettiamo il seriale del badge,
 			// lo inviamo a SetNuovaRilevazione per aggiungerlo alla lista
 			// e per settare la variabile NuovaRilevazione
@@ -58,9 +63,7 @@ bool LettoreRfid::BadgeRilevato()
 			{
 				tmpSerial += String(mfrc522.uid.uidByte[i]);
 			}
-
-			// Funzione che si occupa della registrazione del seriale
-			SetNuovaRilevazione(tmpSerial);
+			setNuovaRilevazione(tmpSerial);
 
 			mfrc522.PCD_StopCrypto1();
 			mfrc522.PICC_HaltA();
@@ -116,7 +119,16 @@ String LettoreRfid::LeggiBlocco(byte numBlocco)
 		return "";
 	}
 
-	//Scrive il nome del badge da buffer1 al membro nomeUser
+
+	//		for (int i = 0; i < len; ++i)
+	//		{
+	//			Serial.print("buffer[");
+	//			Serial.print(i);
+	//			Serial.print("]: ");
+	//			Serial.println(char(buffer1[i]));
+	//
+	//		}
+			//Scrive il nome del badge da buffer1 al membro nomeUser
 	String tmpString = "";
 	for (uint8_t i = 0; i < 16; i++)
 	{
@@ -125,11 +137,13 @@ String LettoreRfid::LeggiBlocco(byte numBlocco)
 			tmpString += char(buffer1[i]);
 		}
 	}
+	Serial.print("In LeggiBlocco: ");
+	Serial.println(tmpString);
 	return tmpString;
 
 }
 
-void LettoreRfid::SetNuovaRilevazione(String tmpSerial)
+void LettoreRfid::setNuovaRilevazione(String tmpSerial)
 {
 	// Il badge non conteneva uno dei campi, esci e setta la variabile
 	// badgeDaRegistrare come true

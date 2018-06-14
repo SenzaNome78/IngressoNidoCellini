@@ -95,12 +95,12 @@ void setup()
 String prepareHtmlPage()
 {
 	String htmlPage = String("HTTP/1.1 200 OK\r\n")
-		+ "Content-Type: text/html\r\n" + "Connection: close\r\n"
-		+ // the connection will be closed after completion of the response
+			+ "Content-Type: text/html\r\n" + "Connection: close\r\n"
+			+ // the connection will be closed after completion of the response
 //            "Refresh: 5\r\n" +  // refresh the page automatically every 5 sec
-"\r\n" + "<!DOCTYPE HTML>" + "<link rel=\"icon\" href=\"data:,\">"
-+ "<html>" + "Analog input:  " + String(analogRead(A0)) + "</html>"
-+ "\n";
+			"\r\n" + "<!DOCTYPE HTML>" + "<link rel=\"icon\" href=\"data:,\">"
+			+ "<html>" + "Analog input:  " + String(analogRead(A0)) + "</html>"
+			+ "\n";
 	return htmlPage;
 }
 
@@ -109,16 +109,15 @@ String prepareHtmlPage()
  userSerial: il seriale da inviare
  la funzione ritorna true se l'invio è andato a buon fine, false se c'e' stato qualche problema
  */
-bool SendDataToWebServer(String userSerial, String ruolo)
+bool SendDataToWebServer(String userSerial)
 {
 	int httpCode; // Ci serve per verificare che l'invio sia andato a buon fine
 	userSerial.trim(); // Eliminiamo eventuali spazi esterni della stringa
 
 	// *************** Usare GET ********************************************************
 	httpC.begin(
-		"http://192.168.0.2:80/NidoCellini/src/RegEntry.php?seriale="
-		+ userSerial
-		+ "&ruolo=" + ruolo);
+			"http://192.168.0.2:80/NidoCellini/src/RegEntry.php?seriale="
+					+ userSerial);
 	//Serial.print("[HTTP] GET...\n");
 	// start connection and send HTTP header
 	httpCode = httpC.GET();
@@ -140,7 +139,7 @@ bool SendDataToWebServer(String userSerial, String ruolo)
 	else
 	{
 		Serial.printf("[HTTP] GET... failed, error: %s\n",
-					  httpC.errorToString(httpCode).c_str());
+				httpC.errorToString(httpCode).c_str());
 		httpC.end();
 		return false;
 	}
@@ -181,7 +180,7 @@ void loop()
 			nome_nuovo_badge = NuovoUtenteHeader.substring(NuovoUtenteHeader.indexOf("nome=") + 5, NuovoUtenteHeader.indexOf('&'));
 			nome_nuovo_badge.trim();
 			ruolo_nuovo_badge = NuovoUtenteHeader.substring(NuovoUtenteHeader.indexOf("ruolo=") + 6, NuovoUtenteHeader.indexOf("ruolo=") + 7);
-			ruolo_nuovo_badge = ruolo_nuovo_badge.substring(0, 1);
+			ruolo_nuovo_badge = ruolo_nuovo_badge.substring(0,1);
 
 
 			client.stop();
@@ -196,9 +195,9 @@ void loop()
 		}
 	}
 
-	//	rfid.ScriviNuovoBadge("Romina", "E");
+//	rfid.ScriviNuovoBadge("Romina", "E");
 
-	//	delay(3000);
+//	delay(3000);
 
 	if (rfid.BadgeRilevato()) // Un badge è stato avvicinato al lettore
 	{
@@ -210,7 +209,7 @@ void loop()
 			LcdPrintCentered("Grazie e", 2, true, lcd);
 			LcdPrintCentered("Buona giornata.", 3, true, lcd);
 
-			SendDataToWebServer(rfid.getSeriale(), TODO);
+			SendDataToWebServer(rfid.getSeriale());
 			// DA ELIMINARE
 			Serial.print("Nome: ");
 			Serial.println(rfid.getNomeUser());
@@ -229,7 +228,7 @@ void loop()
 
 			// DA ELIMINARE
 			Serial.println("Già inserito!");
-			SendDataToWebServer(rfid.getSeriale(), TODO);
+			SendDataToWebServer(rfid.getSeriale());
 			Serial.print("Nome: ");
 			Serial.println(rfid.getNomeUser());
 			Serial.print("Ruolo: ");

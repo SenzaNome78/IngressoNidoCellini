@@ -69,7 +69,7 @@ private:
 
 
 	bool NuovaRilevazione = false;
-	void SetNuovaRilevazione(String tmpSerial);
+	void setNuovaRilevazione(String tmpSerial);
 
 	void resetMembers();
 };
