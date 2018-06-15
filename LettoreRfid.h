@@ -22,17 +22,18 @@ public:
 	bool BadgeRilevato();
 	bool ScriviNuovoBadge(String testoNome, String testoRuolo, String testoSesso);
 
+	bool SetIdPresenza(unsigned long seriale, unsigned long idPresenza);
 
 	String getNomeUser();
 	String getRuoloUser();
 	String getSessoUser();
 
 	bool isNuovaRilevazione();
-	void CancellaSerialeOggi(String seriale);
+	void CancellaSerialeOggi(unsigned long seriale);
 
-	String getSeriale()
+	unsigned long getSerialeCorrente()
 	{
-		return seriale;
+		return serialeCorrente;
 	}
 
 	bool GetBadgeDaRegistrare();
@@ -40,14 +41,20 @@ public:
 	
 	void SetBadgeDaRegistrare(bool val);
 	
-private:
 
+	// Funzione che trova l'id della presenza registrato nel nostro lettore
+	// Come parametro richiede il seriale del badge
+	unsigned long GetIdPresenzaFromSeriale(unsigned long paramSeriale);
+
+	// DA METTERE IN PRIVATE
+	unsigned long strArrayUid[MAX_USERS][2]; //Array che contiene i seriali inseriti finora
+private:
 	bool PulisciBlocco(byte block);
 
 	bool ScriviBlocco(byte block, String stringa);
 	String LeggiBlocco(byte block);
 
-	String strArrayUid[MAX_USERS]; //Array che contiene i seriali inseriti finora
+	
 	MFRC522 mfrc522;
 
 	String nomeUser;
@@ -59,18 +66,25 @@ private:
 	String sessoUser;
 	void setSessoUser(String sessoUser = "");
 
-	String seriale = "";
-	void setSeriale(String seriale = "")
+	unsigned long serialeCorrente;
+	void setSerialeCorrente(unsigned long seriale)
 	{
-		this->seriale = seriale;
+		this->serialeCorrente = seriale;
+	}
+
+	unsigned long idPresenzaCorrente;
+	void setIdPresenzaCorrente(unsigned long paramIdPresenzaCorrente)
+	{
+		this->idPresenzaCorrente = paramIdPresenzaCorrente;
 	}
 	
 	bool badgeDaRegistrare = false;
 
 
 	bool NuovaRilevazione = false;
-	void SetNuovaRilevazione(String tmpSerial);
+	void SetNuovaRilevazione(unsigned long tmpSerial);
 
 	void resetMembers();
 };
+
 

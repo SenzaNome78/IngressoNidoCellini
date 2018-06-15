@@ -5,50 +5,50 @@
 #include <SPI.h>
 #include "LettoreRfid.h"
 #include "IngressiNidoHelper.h"
+#include <ESP8266WebServer.h> 
 
-// Istanza della classe LettoreRfid
-LettoreRfid rfid;
+LettoreRfid rfid; // Istanza della classe LettoreRfid
+LiquidCrystal_I2C lcd(0x27, 20, 4); // instanza per gestire l'lcd
 
-// Mandiamo al server il seriale e il ruolo (bambino, educatore..) del badge 
-bool SendDataToWebServer(String userSerial, String ruolo);
-
-// Funzione che scrive i dati passati dal server su un nuovo badge
-bool AttivaModScrittura();
-
-// instanza per gestire l'lcd
-LiquidCrystal_I2C lcd(0x27, 20, 4);
-// Pausa per il testo dell'lcd
-const int lcdPause = 4000;
+const int lcdPause = 4000; // Pausa per il testo dell'lcd
 
 // Costanti contenenti gli ssid e password per il wifi
 const char ssidSTA[] = "DHouse";			//ssid della rete
 const char passwordSTA[] = "dav050315";		//password della rete
 
-
-HTTPClient httpC;
 WiFiServer webServer(80);	// Usiamo questo server per registrare nuovi bambini o educatori
-WiFiClient client;			// client che usiamo per rilevare una connessione proveniente dal server
-String NuovoUtenteHeader;	// stringa che contiene l'header del messagio get in caso di nuovo badge
 
-// Variabili per scrittura badge se uso Delay
+HTTPClient httpC;				// Usiamo il client http per comunicare le presenze al server
+ESP8266WebServer wServer(80);	// Server http principale
+
+// Server http usato per interrompere la registrazione di un nuovo badge
+ESP8266WebServer InterrServer(8080);
+
+
+
+int idPresenza; // id della presenza, temporaneo per registrarlo nell'array della classe LettoreRfid
+
+String msgDiRitorno = ""; // Stringa contenente il messaggio da ritornare al server
+
+// Mandiamo al server il seriale e il ruolo (bambino, educatore..) del badge 
+int SendDataToWebServer(String userSerial,
+						String ruolo,
+						bool entrata,
+						unsigned long idPresenzaUscita = 0);
+
+// Funzione associa ad un badge l'utente che ci viene passato dal server
+String AttivaModScrittura(String nomeNuovoBadge, String ruoloNuovoBadge, String sessoNuovoBadge);
+
+
+// Variabili temporali per l'attesa nella scrittura badge 
 long tempoAttesaBadgeXScrittura;
-const long tempoTotaleAttesaBadgeXScrittura = 5000; // RITARDO DI 3 SECONDO PER MINUTO
-
-String nome_nuovo_badge;
-String ruolo_nuovo_badge;
-String sesso_nuovo_badge;
-
-bool modScrittura = false;
+const long tempoTotaleAttesaBadgeXScrittura = 15000;
 
 
 void setup()
 {
 	//Serial.begin(9600);   // Prepariamo la seriale
 	Serial.begin(115200);   // Prepariamo la seriale
-
-	// ******Init Variabili tempo*******
-
-	// ******Init Variabili tempo*******
 
 	tempoAttesaBadgeXScrittura = tempoTotaleAttesaBadgeXScrittura;
 
@@ -63,68 +63,72 @@ void setup()
 
 	// **********Init WIFI STATION**************
 	Serial.println("");
-	Serial.print("Connecting to ");
+	Serial.print("Connessione a ");
 	Serial.println(ssidSTA);
 
 	WiFi.mode(WiFiMode::WIFI_STA);
 
 	WiFi.begin(ssidSTA, passwordSTA);
+	// **********Init WIFI STATION**************
+
 
 	while (WiFi.status() != WL_CONNECTED)
 	{
 		delay(500);
 		Serial.print(".");
 	}
-	Serial.println("\nConnected.");
 
+	Serial.print("\nConnesso con IP: ");
 	Serial.println(WiFi.localIP());
-	webServer.begin();
-	// **********Init WIFI STATION**************
+
+
+	wServer.begin();
+	wServer.on("/NewBadge.html", NewBadgeOnIn);
+	wServer.on("/RegEntry.html", RegEntryOnIn);
+
+	Serial.println("\nAvviato server http del lettore.");
+}
+
+// Event handler per quando viene richiesta la pagina NewBadge.html
+// Associa ad un badge un utente registrato sul server
+// Legge i parametri dalla request http fatta dal server apache
+void NewBadgeOnIn()
+{
+	// I campi nome, ruolo e sesso contengono tutti e tre qualcosa, 
+	// avviamo la funzione AttivaModScrittura
+	if (wServer.arg("nome") != "" && wServer.arg("ruolo") != "" && wServer.arg("sesso") != "")
+	{
+		AttivaModScrittura(wServer.arg("nome"), wServer.arg("ruolo"), wServer.arg("sesso"));
+
+		return;
+	}
+}
+
+// Event handler per quando viene richiesta la pagina RegEntry.html
+// Registra l'id della presenza, il cui seriale è stato precedentemente
+// salvato nell'oggetto rfid
+void RegEntryOnIn()
+{
+	rfid.SetIdPresenza(wServer.arg(0).toInt(), wServer.arg(1).toInt());
+	for (int i = 0; i < 10; i++)
+	{
+		Serial.print("Seriale: ");
+		Serial.print(rfid.strArrayUid[i][0]);
+		Serial.print(" - idPresenza: ");
+		Serial.println(rfid.strArrayUid[i][1]);
+	}
+	Serial.println("**************************************");
+
 }
 
 void loop()
 {
-	//*********** INIZIO MOD SCRITTURA ***********************************
-	// Se abbiamo attivatò la modalità scrittura, ci occupiamo di scrivere il nuovo badge
-	// Blocco che rimane in ascolto di un eventuale richiesta per un nuovo 
-	// badge dal server web
-	client = webServer.available();
-
-	if (client)
-	{
-		Serial.println("\n[Client connected]");
-
-		if (client.connected() && modScrittura == false)
-		{
-			NuovoUtenteHeader = client.readStringUntil('\r');
-
-			nome_nuovo_badge = NuovoUtenteHeader.substring(NuovoUtenteHeader.indexOf("nome=") + 5, NuovoUtenteHeader.indexOf('&'));
-			nome_nuovo_badge.trim();
-			ruolo_nuovo_badge = NuovoUtenteHeader.substring(NuovoUtenteHeader.indexOf("ruolo=") + 6, NuovoUtenteHeader.indexOf("ruolo=") + 7);
-			ruolo_nuovo_badge = ruolo_nuovo_badge.substring(0, 1);
-			sesso_nuovo_badge = NuovoUtenteHeader.substring(NuovoUtenteHeader.indexOf("sesso=") + 6, NuovoUtenteHeader.indexOf("sesso=") + 7);
-			sesso_nuovo_badge = sesso_nuovo_badge.substring(0, 1);
-
-			if (nome_nuovo_badge != "" && ruolo_nuovo_badge != "" && sesso_nuovo_badge != "")
-			{
-				// i campi nuovo nome, ruolo e sesso contengono qualcosa, attiviamo la
-				// modalità scrittura e usciamo dal loop
-
-				modScrittura = true;
-				AttivaModScrittura();
+	wServer.handleClient();
 
 
-				return;
-
-			}
-		}
-	}
-	//*********** FINE MOD SCRITTURA ***********************************
-
-	//*********** INIZIO MOD LETTURA ***********************************
+	//*********** INIZIO LETTURA BADGE ***********************************
 	if (rfid.BadgeRilevato()) // Un badge è stato avvicinato al lettore
 	{
-
 		if (rfid.GetBadgeDaRegistrare())
 		{
 			LcdPrintCentered("Il badge non e'", 0, true, lcd);
@@ -145,38 +149,6 @@ void loop()
 
 			PlayBuzzer(); // Riproduce un suono
 
-			if (rfid.getSessoUser() == "M")
-			{
-				tmpSesso = "stato inserito";
-			}
-			else if (rfid.getSessoUser() == "F")
-			{
-				tmpSesso = "stata inserita";
-			}
-
-			if (!SendDataToWebServer(rfid.getSeriale(), rfid.getRuoloUser(), true))
-			{
-				rfid.CancellaSerialeOggi(rfid.getSeriale());
-				LcdPrintCentered("Errore comunicazione", 0, true, lcd);
-				LcdPrintCentered("col server. Per fa-", 1, true, lcd);
-				LcdPrintCentered("vore contattare", 2, true, lcd);
-				LcdPrintCentered("l'amministratore", 3, true, lcd);
-			}
-			else
-			{
-				LcdPrintCentered(rfid.getNomeUser(), 0, true, lcd);
-				LcdPrintCentered("e' " + tmpSesso + ".", 1, true, lcd);
-				LcdPrintCentered("Grazie e", 2, true, lcd);
-				LcdPrintCentered("buona giornata.", 3, true, lcd);
-			}
-
-
-			delay(lcdPause);
-		}
-		else // Se il badge era già stato rilevato in questa sessione, visualizza un messaggio ed esce
-		{
-			PlayBuzzer(); // Riproduce un suono
-
 			//if (rfid.getSessoUser() == "M")
 			//{
 			//	tmpSesso = "stato inserito";
@@ -185,51 +157,66 @@ void loop()
 			//{
 			//	tmpSesso = "stata inserita";
 			//}
-			//LcdPrintCentered(rfid.getNomeUser(), 0, true, lcd);
-			//LcdPrintCentered("era " + tmpSesso + ".", 1, true, lcd);
-			//LcdPrintCentered("Grazie e", 2, true, lcd);
-			//LcdPrintCentered("Buona giornata.", 3, true, lcd);
-
-			if (rfid.getSessoUser() == "M")
+			idPresenza = SendDataToWebServer(String(rfid.getSerialeCorrente()), rfid.getRuoloUser(), true, 0);
+			if (idPresenza > 0)
 			{
-				tmpSesso = "stato inserito";
+				LcdPrintCentered("L'entrata di", 0, true, lcd);
+				LcdPrintCentered(rfid.getNomeUser(), 1, true, lcd);
+				LcdPrintCentered("e' stata registrata", 2, true, lcd);
+				LcdPrintCentered("Buona giornata", 3, true, lcd);
 			}
-			else if (rfid.getSessoUser() == "F")
+			else
 			{
-				tmpSesso = "stata inserita";
-			}
-			if (rfid.getRuoloUser() == "B")
-			{
-				tmpRuolo = "stato inserito";
-			}
-			else if (rfid.getRuoloUser() == "E")
-			{
-				tmpRuolo = "stata inserita";
-			}
-
-
-			if (!SendDataToWebServer(rfid.getSeriale(), rfid.getRuoloUser(), false))
-			{
-				rfid.CancellaSerialeOggi(rfid.getSeriale());
+				rfid.CancellaSerialeOggi(rfid.getSerialeCorrente());
 				LcdPrintCentered("Errore comunicazione", 0, true, lcd);
 				LcdPrintCentered("col server. Per fa-", 1, true, lcd);
 				LcdPrintCentered("vore contattare", 2, true, lcd);
 				LcdPrintCentered("l'amministratore", 3, true, lcd);
+
 			}
-			else
+
+			delay(lcdPause);
+		}
+		else
+		{
+			PlayBuzzer(); // Riproduce un suono
+
+			// Stiamo registrando un'uscita, quindi togliamo il seriale
+			// dal nostro rfid, non prima di avere inviato il tutto
+			// al server per segnare l'uscita stessa.
+			if (SendDataToWebServer(String(rfid.getSerialeCorrente()),
+									rfid.getRuoloUser(),
+									false,
+									rfid.GetIdPresenzaFromSeriale(rfid.getSerialeCorrente())))
 			{
 
-				rfid.CancellaSerialeOggi(rfid.getSeriale());
+				rfid.CancellaSerialeOggi(rfid.getSerialeCorrente());
+				for (int i = 0; i < 10; i++)
+				{
+					Serial.print("Seriale: ");
+					Serial.print(rfid.strArrayUid[i][0]);
+					Serial.print(" - idPresenza: ");
+					Serial.println(rfid.strArrayUid[i][1]);
+				}
+				Serial.println("**************************************");
+
 				LcdPrintCentered("Ciao", 0, true, lcd);
 				LcdPrintCentered(rfid.getNomeUser(), 1, true, lcd);
 				LcdPrintCentered("A presto e", 2, true, lcd);
 				LcdPrintCentered("buona giornata!", 3, true, lcd);
 			}
-
+			else
+			{
+				rfid.CancellaSerialeOggi(rfid.getSerialeCorrente());
+				LcdPrintCentered("Errore comunicazione", 0, true, lcd);
+				LcdPrintCentered("col server. Per fa-", 1, true, lcd);
+				LcdPrintCentered("vore contattare", 2, true, lcd);
+				LcdPrintCentered("l'amministratore", 3, true, lcd);
+			}
 
 			delay(lcdPause);
 		}
-		//*********** FINE MOD LETTURA ***********************************
+		//*********** FINE LETTURA BADGE ***********************************
 	}
 	else // Se nessun badge viene avvicinato visualizza un messaggio ed esci dal loop
 	{
@@ -244,37 +231,64 @@ void loop()
 /*
 Invia il seriale al web server che si occuperà di registrarne l'entrata nel database
 userSerial: il seriale da inviare
-la funzione ritorna true se l'invio è andato a buon fine, false se c'e' stato qualche problema
+ruolo: il ruolo dell'utente (B: Bambino, E:Educatore)
+entrata: indica se si tratta di un entrata (true) o un'uscita (false)
+La funzione restituisce l'id della presenze registrata o '0' se non è riuscito a registrarla
 */
-bool SendDataToWebServer(String userSerial, String ruolo, bool entrata)
+int SendDataToWebServer(String userSerial,
+						String ruolo,
+						bool entrata,
+						unsigned long idPresenzaUscita)
 {
 	int httpCode; // Ci serve per verificare che l'invio sia andato a buon fine
 	userSerial.trim(); // Eliminiamo eventuali spazi esterni della stringa
 
-	
 	// *************** Usare GET ********************************************************
-	String tmpStr = "http://192.168.0.2:80/NidoCellini/src/php/RegEntry.php?seriale="
-	+ userSerial
-	+"&ruolo="+ ruolo+ "&entrata=" + String(entrata);
+	String entr;
+	if (entrata == true)
+	{
+		entr = "vero";
+	}
+	else
+	{
+		entr = "falso";
+	}
+	String urlToServer = "";
 
-	Serial.println(tmpStr);
-	httpC.begin(tmpStr); // Apriamo una connessione http verso il server
+	if (entrata)
+	{
+		urlToServer = "http://192.168.0.2/NidoCellini/src/php/RegEntry.php?seriale="
+			+ userSerial
+			+ "&ruolo=" + ruolo
+			+ "&entrata=" + entr
+			+ "&idPresenzaUscita=" + idPresenzaUscita;
+	}
+	else // Uscita
+	{
+		urlToServer = "http://192.168.0.2/NidoCellini/src/php/RegEntry.php?seriale="
+			+ userSerial
+			+ "&ruolo=" + ruolo
+			+ "&entrata=" + entr
+			+ "&idPresenzaUscita=" + idPresenzaUscita;
+	}
 
+	httpC.begin(urlToServer); // Apriamo una connessione http verso il server
 
-	httpCode = httpC.GET();
+	httpCode = httpC.GET(); // Inviamo la richiesta GET, usando i suoi parametri per registrare la presenza
+
 	// httpCode sarà negativo se c'e' stato un errore
 	if (httpCode > 0)
 	{
 		// Se il server
 		if (httpCode == HTTP_CODE_OK)
 		{
-			// Se tutto è andato bene restituiamo true
 			httpC.end();
+			
 			return true;
 		}
 		// Altrimenti false
 		httpC.end();
-		return false;
+		return 0;
 	}
 	else
 	{
@@ -282,132 +296,97 @@ bool SendDataToWebServer(String userSerial, String ruolo, bool entrata)
 		Serial.printf("[HTTP] GET... fallito. Errore: %s\n",
 					  httpC.errorToString(httpCode).c_str());
 		httpC.end();
-		return false;
+		return 0;
 	}
-
+	httpC.end();
 }
 
-bool AttivaModScrittura()
+String AttivaModScrittura(String nomeNuovoBadge, String ruoloNuovoBadge, String sessoNuovoBadge)
 {
-	WiFiClient clientInterr;
-	String stopParam = "";
-	String stopHeader = "";
-	
 	bool scritturaBadgeRiuscita = false;
-	String msgDiRitorno = ""; // Stringa contenente il messaggio da ritornare al server
-		 
-	if (modScrittura)
+	msgDiRitorno = ""; // Stringa contenente il messaggio da ritornare al server
+
+	InterrServer.begin();
+	InterrServer.on("/Interr.html", InterrOnIn);
+
+	while (tempoAttesaBadgeXScrittura > 0)
 	{
-
-		Serial.println("MODALITA' scrittura Attivata");
-
-		while (tempoAttesaBadgeXScrittura > 0)
+		InterrServer.handleClient();
+		if (rfid.BadgeRilevato())
 		{
-			if (rfid.BadgeRilevato())
+			PlayBuzzer();
+			scritturaBadgeRiuscita = rfid.ScriviNuovoBadge(nomeNuovoBadge, ruoloNuovoBadge, sessoNuovoBadge);//
+
+			if (scritturaBadgeRiuscita)
 			{
-				PlayBuzzer();
-				scritturaBadgeRiuscita = rfid.ScriviNuovoBadge(nome_nuovo_badge, ruolo_nuovo_badge, sesso_nuovo_badge);//
-				
-				if (scritturaBadgeRiuscita)
-				{
-					Serial.println(rfid.getSeriale());
-					msgDiRitorno = String("&S=Registrato&seriale=") + rfid.getSeriale();
-					client.print(msgDiRitorno);
+				msgDiRitorno = String("&S=Registrato&seriale=") + rfid.getSerialeCorrente();
 
-					delay(200);
-					client.flush();
-					client.stop();
-
-					LcdPrintCentered("Badge registrato.", 0, true, lcd);
-					LcdPrintCentered("Allontanarlo dal", 1, true, lcd);
-					LcdPrintCentered("lettore. Grazie e", 2, true, lcd);
-					LcdPrintCentered("buona giornata. ", 3, true, lcd);
-					delay(lcdPause);
-				}
-				else
-				{
-					msgDiRitorno = "&F=ScriviNuovoBadge";
-					client.print(msgDiRitorno);
-					delay(50);
-					client.flush();
-					client.stop();
-
-					LcdPrintCentered("Errore registrazione", 0, true, lcd);
-					LcdPrintCentered("del badge.", 1, true, lcd);
-					LcdPrintCentered("Contattare", 2, true, lcd);
-					LcdPrintCentered("l'amministratore.", 3, true, lcd);
-					delay(lcdPause);
-				}
-				break;
+				delay(50);
+				wServer.send(200, "text / plain", msgDiRitorno);
+				LcdPrintCentered("Badge registrato.", 0, true, lcd);
+				LcdPrintCentered("Allontanarlo dal", 1, true, lcd);
+				LcdPrintCentered("lettore. Grazie e", 2, true, lcd);
+				LcdPrintCentered("buona giornata. ", 3, true, lcd);
+				delay(lcdPause);
 			}
-
-			LcdPrintCentered("Avvicinare il badge", 0, true, lcd);
-			LcdPrintCentered("da registrare", 1, true, lcd);
-			LcdPrintCentered("entro un minuto.", 2, true, lcd);
-			LcdPrintCentered("Grazie.", 3, true, lcd);
-			tempoAttesaBadgeXScrittura -= 500;
-			delay(500);
-
-			clientInterr = webServer.available();
-			if (clientInterr.available())
+			else
 			{
-				stopHeader = clientInterr.readStringUntil('\r');
-				if (stopHeader.indexOf("command=stop") != -1)
-				{
-					delay(50);
-					clientInterr.stop();
-					msgDiRitorno = "&F=Stop";
-					client.print(msgDiRitorno); // Interrotto dall'utente
-					delay(50);
-					client.flush();
-					client.stop();
-					LcdPrintCentered("Registrazione badge", 0, true, lcd);
-					LcdPrintCentered("interrotta", 1, true, lcd);
-					LcdPrintCentered("dall'utente.", 2, true, lcd);
-					LcdPrintCentered(" ", 3, true, lcd);
-					delay(lcdPause);
-					
-					break;
-				}
-				else
-					Serial.println("NON CANCELLARE!");
-
-				delay(10);
+				msgDiRitorno = "&F=ScriviNuovoBadge";
+				delay(50);
+				wServer.send(200, "text / plain", msgDiRitorno);
+				LcdPrintCentered("Errore registrazione", 0, true, lcd);
+				LcdPrintCentered("del badge.", 1, true, lcd);
+				LcdPrintCentered("Contattare", 2, true, lcd);
+				LcdPrintCentered("l'amministratore.", 3, true, lcd);
+				delay(lcdPause);
 			}
-
+			break;
 		}
 
-		// Se il tempo per registrare il badge è finito
-		if (msgDiRitorno == "")
-		{
-			msgDiRitorno = "&F=Timeout";
-			client.print(msgDiRitorno); // Interruzione per scadenza tempo
-			delay(50);
-			client.flush();
-			client.stop();
-
-			LcdPrintCentered("Tempo per registrare", 0, true, lcd);
-			LcdPrintCentered("il badge esaurito.", 1, true, lcd);
-			LcdPrintCentered("Si prega ritentare.", 2, true, lcd);
-			LcdPrintCentered("Grazie. ", 3, true, lcd);
-			delay(lcdPause);
-		}
-
-		tempoAttesaBadgeXScrittura = tempoTotaleAttesaBadgeXScrittura;
-		nome_nuovo_badge = "";
-		ruolo_nuovo_badge = "";
-		sesso_nuovo_badge = "";
-
-		rfid.CancellaSerialeOggi(rfid.getSeriale());
-
-		modScrittura = false;
-
-		return scritturaBadgeRiuscita;
+		LcdPrintCentered("Avvicinare il badge", 0, true, lcd);
+		LcdPrintCentered("da registrare", 1, true, lcd);
+		LcdPrintCentered("entro un minuto.", 2, true, lcd);
+		LcdPrintCentered("Grazie.", 3, true, lcd);
+		tempoAttesaBadgeXScrittura -= 200;
+		delay(200);
 	}
-	client.flush();
-	client.stop();
 
-	clientInterr.flush();
-	clientInterr.stop();
+	// Se il tempo per registrare il badge è finito
+	if (msgDiRitorno == "")
+	{
+		msgDiRitorno = "&F=Timeout";
+		delay(50);
+		wServer.send(200, "text / plain", msgDiRitorno);
+		LcdPrintCentered("Tempo per registrare", 0, true, lcd);
+		LcdPrintCentered("il badge esaurito.", 1, true, lcd);
+		LcdPrintCentered("Si prega ritentare.", 2, true, lcd);
+		LcdPrintCentered("Grazie. ", 3, true, lcd);
+		delay(lcdPause);
+	}
 
+	tempoAttesaBadgeXScrittura = tempoTotaleAttesaBadgeXScrittura;
+
+	rfid.CancellaSerialeOggi(rfid.getSerialeCorrente());
+
+	return msgDiRitorno;
+}
+
+// Event handler per quando viene richiesta la pagina Interr.html
+// Interrompe la fase di attesa per quando viene registrato un nuovo badge
+void InterrOnIn()
+{
+	if (InterrServer.arg("command") == "interr")
+	{
+		msgDiRitorno = "&F=Stop";
+
+		tempoAttesaBadgeXScrittura = 0;
+
+		InterrServer.send(200, "text / plain", "InterrOk");
+		wServer.send(200, "text / plain", "InterrWOk");
+		LcdPrintCentered("Registrazione badge", 0, true, lcd);
+		LcdPrintCentered("interrotta", 1, true, lcd);
+		LcdPrintCentered("dall'utente.", 2, true, lcd);
+		LcdPrintCentered(" ", 3, true, lcd);
+		delay(lcdPause);
+	}
 }

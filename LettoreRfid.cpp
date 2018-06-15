@@ -31,6 +31,13 @@ LettoreRfid::LettoreRfid() :
 	//	mfrc522 = new MFRC522(SS_PIN, RST_PIN);
 	SPI.begin();
 	mfrc522.PCD_Init();   // Init MFRC522
+
+	// Inizializzo l'array contenente i seriali inseriti e l'id delle presenze
+	for (int i = 0; i < MAX_USERS; i++)
+	{
+		strArrayUid[i][0] = 0;
+		strArrayUid[i][1] = 0;
+	}
 	//NuovaRilevazione = true;
 }
 
@@ -60,7 +67,7 @@ bool LettoreRfid::BadgeRilevato()
 			}
 
 			// Funzione che si occupa della registrazione del seriale
-			SetNuovaRilevazione(tmpSerial);
+			SetNuovaRilevazione(tmpSerial.toInt());
 
 			mfrc522.PCD_StopCrypto1();
 			mfrc522.PICC_HaltA();
@@ -129,7 +136,7 @@ String LettoreRfid::LeggiBlocco(byte numBlocco)
 
 }
 
-void LettoreRfid::SetNuovaRilevazione(String tmpSerial)
+void LettoreRfid::SetNuovaRilevazione(unsigned long tmpSerial)
 {
 	// Il badge non conteneva uno dei campi, esci e setta la variabile
 	// badgeDaRegistrare come true
@@ -143,13 +150,13 @@ void LettoreRfid::SetNuovaRilevazione(String tmpSerial)
 		badgeDaRegistrare = false;
 	}
 
-	setSeriale(tmpSerial);
+	setSerialeCorrente(tmpSerial);
 
 	// Se il seriale è già presente in questa sessione
 	// Setta NuovaRilevazione a false ed esce dalla funzione
 	for (byte i = 0; i < MAX_USERS; i++)
 	{
-		if (strArrayUid[i] == getSeriale())
+		if (strArrayUid[i][0] == getSerialeCorrente())
 		{
 			NuovaRilevazione = false;
 			return;
@@ -161,9 +168,9 @@ void LettoreRfid::SetNuovaRilevazione(String tmpSerial)
 	// e lo inseriamo in quel posto
 	for (byte i = 0; i < MAX_USERS; i++)
 	{
-		if (strArrayUid[i] == "")
+		if (strArrayUid[i][0] == 0)
 		{
-			strArrayUid[i] = getSeriale();
+			strArrayUid[i][0] = getSerialeCorrente();
 			NuovaRilevazione = true;
 			return;
 		}
@@ -210,6 +217,35 @@ bool LettoreRfid::ScriviNuovoBadge(String testoNome, String testoRuolo, String t
 		return false;
 	}
 }
+
+unsigned long LettoreRfid::GetIdPresenzaFromSeriale(unsigned long paramSeriale)
+{
+	for (int i = 0; i < MAX_USERS; i++)
+	{
+		if (strArrayUid[i][0] == paramSeriale)
+		{
+			return strArrayUid[i][1];
+		}
+	}
+	return 0;
+}
+
+ bool LettoreRfid::SetIdPresenza(unsigned long seriale, unsigned long idPresenza)
+ {
+	 // Cerchiamo la presenza a cui dobbiamo aggiungere l'idPresenza
+	 setIdPresenzaCorrente(idPresenza);
+
+	 for (byte i = 0; i < MAX_USERS; i++)
+	 {
+		 if (strArrayUid[i][0] == seriale)
+		 {
+			 strArrayUid[i][1] = idPresenza;
+			 return true;
+		 }
+	 }
+
+	 return false;
+ }
 
 bool LettoreRfid::ScriviBlocco(byte block, String stringa)
 {
@@ -292,7 +328,7 @@ void LettoreRfid::resetMembers()
 	nomeUser = "";
 	ruoloUser = "";
 	sessoUser = "";
-	seriale = "";
+	serialeCorrente = 0;
 }
 
 LettoreRfid::~LettoreRfid()
@@ -336,13 +372,14 @@ bool LettoreRfid::isNuovaRilevazione()
 	return NuovaRilevazione;
 }
 
-void LettoreRfid::CancellaSerialeOggi(String seriale)
+void LettoreRfid::CancellaSerialeOggi(unsigned long seriale)
 {
 	for (byte i = 0; i < MAX_USERS; i++)
 	{
-		if (strArrayUid[i] == seriale)
+		if (strArrayUid[i][0] == seriale)
 		{
-			strArrayUid[i] = "";
+			strArrayUid[i][0] = 0;
+			strArrayUid[i][1] = 0;
 			return;
 		}
 	}
