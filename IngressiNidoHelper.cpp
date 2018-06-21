@@ -60,15 +60,17 @@ void LcdPrintCentered(String testo, uint8_t riga, bool spcBegin, LiquidCrystal_I
 	}
 
 	// Arrivati qui il nostro testo sarà di venti caratteri, con spazi iniziali se necessario
-
 	lcd.setCursor(0, riga);
 	lcd.print(testo);
 }
 
+// Funzione che fa emettere un suono al nostro buzzer
 
 void PlayBuzzer(){
 	int piezoPin = 16;
 
+	// Passiamo alla funzione tone il pin collegato al buzzer,
+	// la frequenza del segnale PWM (50% duty cycle) e la durata del suono
 	tone(piezoPin, 800, 30);
 	delay(60);
 	tone(piezoPin, 1200, 30);
@@ -78,5 +80,16 @@ void PlayBuzzer(){
 	tone(piezoPin, 1600, 40);
 	delay(60);
 
+	// Interrompiamo l'emissione del tono
 	noTone(piezoPin);
+}
+
+
+// Riavviamo il microcontrollore ESP8266.
+// Per un bug è necessario fare un power cycle
+// (togliere e rimettere la corrente)
+// per far funzionare a dovere il comando
+void ResetLettore()
+{
+	ESP.restart();
 }

@@ -13,8 +13,8 @@ LiquidCrystal_I2C lcd(0x27, 20, 4); // instanza per gestire l'lcd
 const int lcdPause = 4000; // Pausa per il testo dell'lcd
 
 // Costanti contenenti gli ssid e password per il wifi
-const char ssidSTA[] = "DHouse";			//ssid della rete
-const char passwordSTA[] = "dav050315";		//password della rete
+const char ssidSTA[] = "NidoCellini";			//ssid della rete
+const char passwordSTA[] = "NidoCelliniPass";		//password della rete
 
 WiFiServer webServer(80);	// Usiamo questo server per registrare nuovi bambini o educatori
 
@@ -41,13 +41,12 @@ String AttivaModScrittura(String nomeNuovoBadge, String ruoloNuovoBadge, String 
 
 
 // Variabili temporali per l'attesa nella scrittura badge 
-long tempoAttesaBadgeXScrittura;
-const long tempoTotaleAttesaBadgeXScrittura = 15000;
+long tempoAttesaBadgeXScrittura = 0;
+const long tempoTotaleAttesaBadgeXScrittura = 5000;
 
 
-void setup()
+ void setup()
 {
-	//Serial.begin(9600);   // Prepariamo la seriale
 	Serial.begin(115200);   // Prepariamo la seriale
 
 	tempoAttesaBadgeXScrittura = tempoTotaleAttesaBadgeXScrittura;
@@ -72,21 +71,43 @@ void setup()
 	// **********Init WIFI STATION**************
 
 
+	// Tentativo di connettersi alla rete Wi-Fi
+	// Dopo un tempo stabilito visualizza un msg di errore
+	tempoAttesaBadgeXScrittura = tempoTotaleAttesaBadgeXScrittura;
 	while (WiFi.status() != WL_CONNECTED)
 	{
-		delay(500);
+		if (tempoAttesaBadgeXScrittura < 1)
+		{
+
+			LcdPrintCentered("Errore collegamento", 0, true, lcd);
+			LcdPrintCentered("alla rete WiFi.", 1, true, lcd);
+			LcdPrintCentered("Contattare", 2, true, lcd);
+			LcdPrintCentered("l'amministratore", 3, true, lcd);
+			continue;
+		} 
+		LcdPrintCentered("In attesa del", 0, true, lcd);
+		LcdPrintCentered("collegamento", 1, true, lcd);
+		LcdPrintCentered(" col server.", 2, true, lcd);
+		LcdPrintCentered("Attendere prego.", 3, true, lcd);
+		tempoAttesaBadgeXScrittura -= 100;
+
+		delay(100);
 		Serial.print(".");
 	}
+	tempoAttesaBadgeXScrittura = 0;
 
+	// Siamo connessi alla rete Wi-Fi
 	Serial.print("\nConnesso con IP: ");
 	Serial.println(WiFi.localIP());
 
 
+	// Attiviamo il server http e registriamo i gestori degli eventi
 	wServer.begin();
 	wServer.on("/NewBadge.html", NewBadgeOnIn);
 	wServer.on("/RegEntry.html", RegEntryOnIn);
+	wServer.on("/Diagnostica.html", DiagnosticaOnIn);
 
-	Serial.println("\nAvviato server http del lettore.");
+	Serial.println("\nAvviato server HTTP del lettore.");
 }
 
 // Event handler per quando viene richiesta la pagina NewBadge.html
@@ -110,21 +131,20 @@ void NewBadgeOnIn()
 void RegEntryOnIn()
 {
 	rfid.SetIdPresenza(wServer.arg(0).toInt(), wServer.arg(1).toInt());
-	for (int i = 0; i < 10; i++)
-	{
-		Serial.print("Seriale: ");
-		Serial.print(rfid.strArrayUid[i][0]);
-		Serial.print(" - idPresenza: ");
-		Serial.println(rfid.strArrayUid[i][1]);
-	}
-	Serial.println("**************************************");
+}
 
+// Event handler per quando viene richiesta la pagina Diagnostica.html
+// Lo usiamo quando dobbiamo eseguire dei comandi di diagnostica:
+// Reset del lettore rfid (dopo un upload fare un power cycle per 
+// far funzionare il reset. Problema noto dell'Esp8266)
+void DiagnosticaOnIn()
+{
+	ResetLettore();
 }
 
 void loop()
 {
-	wServer.handleClient();
-
+	wServer.handleClient(); // Se il server sta contattando il lettore, gestisce gli eventi collegati
 
 	//*********** INIZIO LETTURA BADGE ***********************************
 	if (rfid.BadgeRilevato()) // Un badge è stato avvicinato al lettore
@@ -191,14 +211,6 @@ void loop()
 			{
 
 				rfid.CancellaSerialeOggi(rfid.getSerialeCorrente());
-				for (int i = 0; i < 10; i++)
-				{
-					Serial.print("Seriale: ");
-					Serial.print(rfid.strArrayUid[i][0]);
-					Serial.print(" - idPresenza: ");
-					Serial.println(rfid.strArrayUid[i][1]);
-				}
-				Serial.println("**************************************");
 
 				LcdPrintCentered("Ciao", 0, true, lcd);
 				LcdPrintCentered(rfid.getNomeUser(), 1, true, lcd);
@@ -255,6 +267,8 @@ int SendDataToWebServer(String userSerial,
 	}
 	String urlToServer = "";
 
+
+
 	if (entrata)
 	{
 		urlToServer = "http://192.168.0.2/NidoCellini/src/php/RegEntry.php?seriale="
@@ -301,6 +315,9 @@ int SendDataToWebServer(String userSerial,
 	httpC.end();
 }
 
+
+// Proviamo a scrivere un nuovo badge, entro il tempo tempoTotaleAttesaBadgeXScrittura
+// impostato nella sezione globale
 String AttivaModScrittura(String nomeNuovoBadge, String ruoloNuovoBadge, String sessoNuovoBadge)
 {
 	bool scritturaBadgeRiuscita = false;
@@ -371,18 +388,24 @@ String AttivaModScrittura(String nomeNuovoBadge, String ruoloNuovoBadge, String 
 	return msgDiRitorno;
 }
 
+
 // Event handler per quando viene richiesta la pagina Interr.html
 // Interrompe la fase di attesa per quando viene registrato un nuovo badge
 void InterrOnIn()
 {
 	if (InterrServer.arg("command") == "interr")
 	{
+		// Inviamo questo messaggio al server per far visualizzare
+		// il messaggio appropriato al browser web
 		msgDiRitorno = "&F=Stop";
 
+		// Impostando questa variabile a zero la funzione AttivaModScrittura
+		// si fermerà
 		tempoAttesaBadgeXScrittura = 0;
 
 		InterrServer.send(200, "text / plain", "InterrOk");
 		wServer.send(200, "text / plain", "InterrWOk");
+
 		LcdPrintCentered("Registrazione badge", 0, true, lcd);
 		LcdPrintCentered("interrotta", 1, true, lcd);
 		LcdPrintCentered("dall'utente.", 2, true, lcd);

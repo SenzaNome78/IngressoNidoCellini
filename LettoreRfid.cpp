@@ -1,14 +1,5 @@
-/*
- * LettoreRfid.cpp
- *
- *  Created on: 21 mag 2018
- *      Author: David
- */
 
 #include "LettoreRfid.h"
-
- // Definisci la chiave per l'autenticazione del badge
-
 
 // Variabile per il blocco di memoria contenente il nome
 byte bloccoNome = 12;
@@ -21,14 +12,10 @@ byte bloccoSesso = 14;
 
 MFRC522::StatusCode status;	// Status code dal lettore
 
-// Lunghezza della stringa del nome
-//byte len;
-
 // Costruttore
 LettoreRfid::LettoreRfid() :
 	mfrc522(SS_PIN, RST_PIN)
 {
-	//	mfrc522 = new MFRC522(SS_PIN, RST_PIN);
 	SPI.begin();
 	mfrc522.PCD_Init();   // Init MFRC522
 
@@ -38,19 +25,20 @@ LettoreRfid::LettoreRfid() :
 		strArrayUid[i][0] = 0;
 		strArrayUid[i][1] = 0;
 	}
-	//NuovaRilevazione = true;
 }
 
 /***********************************************************************
  * Rileva se un badge è stato avvicinato al lettore.
- * Se è così viene inizializzato con PICC_ReadCardSeriale e ritorna true
- * altrimenti ritorna false
+ * Se è così viene inizializzato con PICC_ReadCardSeriale, 
+ * memorizza il seriale del badge e esegue la funzione SetNuovaRilevazione
+*  e restituisce true.
+ * Altrimenti restituisce false.
  */
 bool LettoreRfid::BadgeRilevato()
 {
-	resetMembers();
 	if (mfrc522.PICC_IsNewCardPresent())
 	{
+		resetMembers();
 		if (mfrc522.PICC_ReadCardSerial())
 		{
 			nomeUser = LeggiBlocco(bloccoNome);
@@ -84,8 +72,8 @@ bool LettoreRfid::BadgeRilevato()
 	}
 	else
 	{
-		mfrc522.PCD_StopCrypto1();
-		mfrc522.PICC_HaltA();
+		//mfrc522.PCD_StopCrypto1();
+		//mfrc522.PICC_HaltA();
 
 		return false;
 	}
@@ -182,15 +170,8 @@ void LettoreRfid::SetNuovaRilevazione(unsigned long tmpSerial)
  */
 bool LettoreRfid::ScriviNuovoBadge(String testoNome, String testoRuolo, String testoSesso)
 {
-	//resetMembers();
-
-	//if (testoNome == "" || testoNome.length() > 16 || testoRuolo == ""
-	//	|| testoRuolo.length() > 16)
-	//{
-	//	Serial.println("Esco da ScriviNuovoBadge");
-	//	return false;
-	//}
-
+	resetMembers();
+	
 	if (mfrc522.PICC_IsNewCardPresent())
 	{
 		if (mfrc522.PICC_ReadCardSerial())

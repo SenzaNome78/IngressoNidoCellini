@@ -29,6 +29,7 @@ public:
 	String getSessoUser();
 
 	bool isNuovaRilevazione();
+
 	void CancellaSerialeOggi(unsigned long seriale);
 
 	unsigned long getSerialeCorrente()
@@ -46,16 +47,16 @@ public:
 	// Come parametro richiede il seriale del badge
 	unsigned long GetIdPresenzaFromSeriale(unsigned long paramSeriale);
 
-	// DA METTERE IN PRIVATE
-	unsigned long strArrayUid[MAX_USERS][2]; //Array che contiene i seriali inseriti finora
 private:
+	unsigned long strArrayUid[MAX_USERS][2]; //Array che contiene i seriali inseriti finora
+
 	bool PulisciBlocco(byte block);
 
 	bool ScriviBlocco(byte block, String stringa);
 	String LeggiBlocco(byte block);
 
 	
-	MFRC522 mfrc522;
+	MFRC522 mfrc522; // Istanza del nostro lettore RFID
 
 	String nomeUser;
 	void setNomeUser(String nomeUser = "");
