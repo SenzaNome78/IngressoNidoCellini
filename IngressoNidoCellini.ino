@@ -73,7 +73,7 @@ const long tempoTotaleAttesaBadgeXScrittura = 5000;
 
 	// Tentativo di connettersi alla rete Wi-Fi
 	// Dopo un tempo stabilito visualizza un msg di errore
-	tempoAttesaBadgeXScrittura = tempoTotaleAttesaBadgeXScrittura;
+	XXXtempoAttesaBadgeXScrittura = tempoTotaleAttesaBadgeXScrittura;
 	while (WiFi.status() != WL_CONNECTED)
 	{
 		if (tempoAttesaBadgeXScrittura < 1)
