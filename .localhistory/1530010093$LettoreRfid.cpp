@@ -1,6 +1,9 @@
 
 #include "LettoreRfid.h"
 
+const static uint8_t NEW_BADGE_OK = 1;
+const static uint8_t NEW_BADGE_ERR = 2;
+const static uint8_t NEW_BADGE_ATTESA = 3;
 
 MFRC522::StatusCode status;	// Status code dal lettore
 
@@ -180,8 +183,7 @@ uint8_t LettoreRfid::ScriviNuovoBadge(String testoNome, String testoRuolo, Strin
 				tmpSerial += String(mfrc522.uid.uidByte[i]);
 			}
 			setSerialeCorrente(tmpSerial.toInt());
-			Serial.println("In LettoreRfid::ScirivNuovoBadge");
-			Serial.println(tmpSerial);
+
 			// Scriviamo nei blocchi di mem del badge
 			// i parametri passati a questa funzione
 			ScriviBlocco(bloccoNome, testoNome);
@@ -191,20 +193,20 @@ uint8_t LettoreRfid::ScriviNuovoBadge(String testoNome, String testoRuolo, Strin
 			mfrc522.PCD_StopCrypto1();
 			mfrc522.PICC_HaltA();
 
-			return NEW_BADGE_OK;
+			return true;
 		}
 		else
 		{
 			mfrc522.PCD_StopCrypto1();
 			mfrc522.PICC_HaltA();
-			return NEW_BADGE_ERR;
+			return false;
 		}
 	}
 	else
 	{
 		mfrc522.PCD_StopCrypto1();
 		mfrc522.PICC_HaltA();
-		return NEW_BADGE_ATTESA;
+		return false;
 	}
 }
 

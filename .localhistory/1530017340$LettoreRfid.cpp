@@ -180,8 +180,7 @@ uint8_t LettoreRfid::ScriviNuovoBadge(String testoNome, String testoRuolo, Strin
 				tmpSerial += String(mfrc522.uid.uidByte[i]);
 			}
 			setSerialeCorrente(tmpSerial.toInt());
-			Serial.println("In LettoreRfid::ScirivNuovoBadge");
-			Serial.println(tmpSerial);
+
 			// Scriviamo nei blocchi di mem del badge
 			// i parametri passati a questa funzione
 			ScriviBlocco(bloccoNome, testoNome);

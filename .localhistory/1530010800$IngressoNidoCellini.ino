@@ -42,7 +42,7 @@ String AttivaModScrittura(String nomeNuovoBadge, String ruoloNuovoBadge, String 
 
 // Variabili temporali per l'attesa nella scrittura badge 
 long tempoAttesaBadgeXScrittura = 0;
-const long tempoTotaleAttesaBadgeXScrittura = 5000;
+const long tempoTotaleAttesaBadgeXScrittura = 10000;
 
 
 void setup()
@@ -347,41 +347,12 @@ String AttivaModScrittura(String nomeNuovoBadge, String ruoloNuovoBadge, String 
 		// Rileviamo e tentiamo di scrivere il nuovo badge
 		uint8_t rispostaScrittura = rfid.ScriviNuovoBadge(nomeNuovoBadge, ruoloNuovoBadge, sessoNuovoBadge);
 
-		// Siamo in attesa che il nuovo badge sia avvicinato al lettore per 
-		// registrarlo
-		if (rispostaScrittura == LettoreRfid::NEW_BADGE_ATTESA)
-		{
-			LcdPrintCentered("Avvicinare il badge", 0, true, lcd);
-			LcdPrintCentered("da registrare", 1, true, lcd);
-			LcdPrintCentered("entro un minuto.", 2, true, lcd);
-			LcdPrintCentered("Grazie.", 3, true, lcd);
-			tempoAttesaBadgeXScrittura -= 200;
-			delay(200);
-		}
-		// C'è stato un errore di registrazione del nuovo badge
-		// Lo diciamo al server e usciamo
-		else if (rispostaScrittura == LettoreRfid::NEW_BADGE_ERR)
-		{
-			PlayBuzzer();
-
-			msgDiRitorno = "&F=ScriviNuovoBadge";
-			delay(50);
-			wServer.send(200, "text / plain", msgDiRitorno);
-			LcdPrintCentered("Errore registrazione", 0, true, lcd);
-			LcdPrintCentered("del badge.", 1, true, lcd);
-			LcdPrintCentered("Contattare", 2, true, lcd);
-			LcdPrintCentered("l'amministratore.", 3, true, lcd);
-
-			delay(lcdPause);
-			break;
-		}
 		// Se la scrittura è andata a buon fine lo comunichiamo al server 
 		// che associerà il seriale all'utente 
-		else if (rispostaScrittura == LettoreRfid::NEW_BADGE_OK)
+		if (rispostaScrittura == LettoreRfid::NEW_BADGE_OK)
 		{
 			PlayBuzzer();
 
-			Serial.println("In ino, AttivaModScrittura, NEW_BADGE_OK");
 			Serial.println(rfid.getSerialeCorrente());
 			msgDiRitorno = String("&S=Registrato&seriale=") + rfid.getSerialeCorrente();
 
@@ -395,7 +366,32 @@ String AttivaModScrittura(String nomeNuovoBadge, String ruoloNuovoBadge, String 
 			delay(lcdPause);
 			break;
 		}
-		
+		// C'è stato un errore di registrazione del nuovo badge
+		// Lo diciamo al server e usciamo
+		else if (rispostaScrittura == LettoreRfid::NEW_BADGE_ERR)
+		{
+			msgDiRitorno = "&F=ScriviNuovoBadge";
+			delay(50);
+			wServer.send(200, "text / plain", msgDiRitorno);
+			LcdPrintCentered("Errore registrazione", 0, true, lcd);
+			LcdPrintCentered("del badge.", 1, true, lcd);
+			LcdPrintCentered("Contattare", 2, true, lcd);
+			LcdPrintCentered("l'amministratore.", 3, true, lcd);
+
+			delay(lcdPause);
+			break;
+		}
+		// Siamo in attesa che il nuovo badge sia avvicinato al lettore per 
+		// registrarlo
+		else if (rispostaScrittura == LettoreRfid::NEW_BADGE_ERR)
+		{
+			LcdPrintCentered("Avvicinare il badge", 0, true, lcd);
+			LcdPrintCentered("da registrare", 1, true, lcd);
+			LcdPrintCentered("entro un minuto.", 2, true, lcd);
+			LcdPrintCentered("Grazie.", 3, true, lcd);
+			tempoAttesaBadgeXScrittura -= 200;
+			delay(200);
+		}
 	}
 
 	// Se il tempo per registrare il badge è finito

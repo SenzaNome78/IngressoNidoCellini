@@ -11,7 +11,7 @@
 
 const uint8_t RST_PIN = D3;	 // Pin reset del lettore rfid
 const uint8_t SS_PIN = D8;	 // Pin seriale del lettore rfid
-const byte MAX_USERS = 50;	 // Utenti massimi di questo lettore
+const byte MAX_USERS = 100;	 // Utenti massimi di questo lettore
 const byte bloccoNome = 12;  // Blocco di memoria contenente il nome
 const byte bloccoRuolo = 13; // Blocco di memoria contenente il ruolo (un solo byte: B o E)
 const byte bloccoSesso = 14; // Blocco di memoria contenente il sesso (un solo byte: F o M)
@@ -27,7 +27,7 @@ public:
 	const static uint8_t NEW_BADGE_ATTESA = 3;
 
 	bool BadgeRilevato();
-	uint8_t ScriviNuovoBadge(String testoNome, String testoRuolo, String testoSesso);
+	bool ScriviNuovoBadge(String testoNome, String testoRuolo, String testoSesso);
 
 	bool SetIdPresenza(unsigned long seriale, unsigned long idPresenza);
 

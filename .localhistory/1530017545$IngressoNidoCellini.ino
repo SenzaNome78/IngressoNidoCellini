@@ -381,7 +381,6 @@ String AttivaModScrittura(String nomeNuovoBadge, String ruoloNuovoBadge, String 
 		{
 			PlayBuzzer();
 
-			Serial.println("In ino, AttivaModScrittura, NEW_BADGE_OK");
 			Serial.println(rfid.getSerialeCorrente());
 			msgDiRitorno = String("&S=Registrato&seriale=") + rfid.getSerialeCorrente();
 
