@@ -36,8 +36,7 @@ String SendDataToWebServer(String userSerial,
 String AttivaModScrittura(String nomeNuovoBadge, String ruoloNuovoBadge, String sessoNuovoBadge);
 
 
-// Variabili temporali per l'attesa nella scrittura badge e
-// nel collegarsi alla rete WIFI
+// Variabili temporali per l'attesa nella scrittura badge 
 long tempoAttesaBadgeXScrittura = 0;
 const long tempoTotaleAttesaBadgeXScrittura = 10000;
 
@@ -78,9 +77,9 @@ void setup()
 		LcdPrintCentered("collegamento", 1, true, lcd);
 		LcdPrintCentered(" col server.", 2, true, lcd);
 		LcdPrintCentered("Attendere prego.", 3, true, lcd);
-		tempoAttesaBadgeXScrittura -= 500;
+		tempoAttesaBadgeXScrittura -= 100;
 
-		delay(500);
+		delay(100);
 		Serial.print(".");
 	}
 
@@ -372,6 +371,8 @@ String AttivaModScrittura(String nomeNuovoBadge, String ruoloNuovoBadge, String 
 		{
 			PlayBuzzer();
 
+			Serial.println("In ino, AttivaModScrittura, NEW_BADGE_OK");
+			Serial.println(rfid.getSerialeCorrente());
 			msgDiRitorno = String("&S=Registrato&seriale=") + rfid.getSerialeCorrente();
 
 			delay(50);

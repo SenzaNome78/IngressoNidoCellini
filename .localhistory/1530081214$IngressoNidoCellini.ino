@@ -78,9 +78,9 @@ void setup()
 		LcdPrintCentered("collegamento", 1, true, lcd);
 		LcdPrintCentered(" col server.", 2, true, lcd);
 		LcdPrintCentered("Attendere prego.", 3, true, lcd);
-		tempoAttesaBadgeXScrittura -= 500;
+		tempoAttesaBadgeXScrittura -= 100;
 
-		delay(500);
+		delay(100);
 		Serial.print(".");
 	}
 
@@ -346,8 +346,8 @@ String AttivaModScrittura(String nomeNuovoBadge, String ruoloNuovoBadge, String 
 			LcdPrintCentered("da registrare", 1, true, lcd);
 			LcdPrintCentered("entro un minuto.", 2, true, lcd);
 			LcdPrintCentered("Grazie.", 3, true, lcd);
-			tempoAttesaBadgeXScrittura -= 200;
-			delay(200);
+			tempoAttesaBadgeXScrittura -= 500;
+			delay(500);
 		}
 		// C'è stato un errore di registrazione del nuovo badge
 		// Lo diciamo al server e usciamo
@@ -372,6 +372,8 @@ String AttivaModScrittura(String nomeNuovoBadge, String ruoloNuovoBadge, String 
 		{
 			PlayBuzzer();
 
+			Serial.println("In ino, AttivaModScrittura, NEW_BADGE_OK");
+			Serial.println(rfid.getSerialeCorrente());
 			msgDiRitorno = String("&S=Registrato&seriale=") + rfid.getSerialeCorrente();
 
 			delay(50);
