@@ -24,10 +24,14 @@ ESP8266WebServer wServer(80);	// Server http principale
 // Server http usato per interrompere la registrazione di un nuovo badge
 ESP8266WebServer InterrServer(8080);
 
+
+
+int idPresenza; // id della presenza, temporaneo per registrarlo nell'array della classe LettoreRfid
+
 String msgDiRitorno = ""; // Stringa contenente il messaggio da ritornare al server
 
 // Mandiamo al server il seriale e il ruolo (bambino, educatore..) del badge 
-String SendDataToWebServer(String userSerial,
+int SendDataToWebServer(String userSerial,
 	String ruolo,
 	bool entrata,
 	String idPresenzaUscita = "");
@@ -36,22 +40,25 @@ String SendDataToWebServer(String userSerial,
 String AttivaModScrittura(String nomeNuovoBadge, String ruoloNuovoBadge, String sessoNuovoBadge);
 
 
-// Variabili temporali per l'attesa nella scrittura badge e
-// nel collegarsi alla rete WIFI
+// Variabili temporali per l'attesa nella scrittura badge 
 long tempoAttesaBadgeXScrittura = 0;
-const long tempoTotaleAttesaBadgeXScrittura = 10000;
+const long tempoTotaleAttesaBadgeXScrittura = 5000;
 
 
 void setup()
 {
 	Serial.begin(115200);   // Prepariamo la seriale
-	
+
+	// **********Init RFID**************
+	SPI.begin();      // Init SPI bus
+	// **********Init RFID**************
+
 	// **********Init LCD**************
 	lcd.init();  //inizializiamo l'lcd
 	lcd.backlight();  // Accendiamo la luce di sfondo dell'lcd
 	// **********Init LCD**************
 
-	// Avviamo la connessione alla rete WIFI ssidSTA
+	// **********Init WIFI STATION**************
 	Serial.println("");
 	Serial.print("Connessione a ");
 	Serial.println(ssidSTA);
@@ -59,6 +66,8 @@ void setup()
 	WiFi.mode(WiFiMode::WIFI_STA);
 
 	WiFi.begin(ssidSTA, passwordSTA);
+	// **********Init WIFI STATION**************
+
 
 	// Tentativo di connettersi alla rete Wi-Fi
 	// Dopo un tempo stabilito visualizza un msg di errore
@@ -94,9 +103,10 @@ void setup()
 	// Attiviamo il server http e registriamo i gestori degli eventi
 	wServer.begin();
 	wServer.on("/NewBadge.html", NewBadgeOnIn);
+	wServer.on("/RegEntry.html", RegEntryOnIn);
 	wServer.on("/Diagnostica.html", DiagnosticaOnIn);
 
-	Serial.println("\nServer HTTP interno avviato.");
+	Serial.println("\nAvviato server HTTP del lettore.");
 }
 
 // Event handler per quando viene richiesta la pagina NewBadge.html
@@ -111,6 +121,28 @@ void NewBadgeOnIn()
 		AttivaModScrittura(wServer.arg("nome"), wServer.arg("ruolo"), wServer.arg("sesso"));
 
 		return;
+	}
+}
+
+// Event handler per quando viene richiesta la pagina RegEntry.html
+// Registra l'id della presenza, il cui seriale è stato precedentemente
+// salvato nell'oggetto rfid. Se al parametro "seriale" è stato passato
+// "NoSeriale" significa che il seriale non era associato ad un utente
+// e quindi non registriamo la presenza
+void RegEntryOnIn()
+{
+	if (wServer.arg("seriale") == "NoSeriale")
+	{
+		LcdPrintCentered("Il badge non e'", 0, true, lcd);
+		LcdPrintCentered("stato registrato.", 1, true, lcd);
+		LcdPrintCentered("Per favore contatti", 2, true, lcd);
+		LcdPrintCentered("l'amministratore.", 3, true, lcd);
+
+		delay(lcdPause);
+	}
+	else
+	{
+		rfid.SetIdPresenza(wServer.arg("seriale"), wServer.arg("idPresenza"));
 	}
 }
 
@@ -143,8 +175,6 @@ void loop()
 			return;
 		}
 
-		String idPresenza; // id della presenza, temporaneo per registrarlo nell'array della classe LettoreRfid
-
 		String tmpSesso = "";
 		String tmpRuolo = "";
 		if (rfid.isNuovaRilevazione()) // NUOVA entrata rilevata
@@ -152,50 +182,41 @@ void loop()
 
 			PlayBuzzer(); // Riproduce un suono
 
+			//if (rfid.getSessoUser() == "M")
+			//{
+			//	tmpSesso = "stato inserito";
+			//}
+			//else if (rfid.getSessoUser() == "F")
+			//{
+			//	tmpSesso = "stata inserita";
+			//}
 			idPresenza = SendDataToWebServer(rfid.getSerialeCorrente(), rfid.getRuoloUser(), true, "");
-
-			// Se la presenza è stata registrata e ci è stato passato
-			// il relativo idPresenza, visualizziamo un messaggio
-			if (idPresenza != "" && idPresenza != "NO_SERIALE")
+			if (idPresenza > 0)
 			{
 				LcdPrintCentered("L'entrata di", 0, true, lcd);
 				LcdPrintCentered(rfid.getNomeUser(), 1, true, lcd);
 				LcdPrintCentered("e' stata registrata", 2, true, lcd);
 				LcdPrintCentered("Buona giornata", 3, true, lcd);
 			}
-			// Il seriale non era associato a nessun utente.
-			// visualizziamo un messaggio sull'lcd
-			// e togliamo il seriale salvato nell'array
-			else if (idPresenza == "NO_SERIALE")
-			{
-				rfid.CancellaSerialeOggi(rfid.getSerialeCorrente());
-				LcdPrintCentered("Il badge non e'", 0, true, lcd);
-				LcdPrintCentered("associato ad alcun", 1, true, lcd);
-				LcdPrintCentered("utente. Contattare", 2, true, lcd);
-				LcdPrintCentered("l'amministratore", 3, true, lcd);
-			}
-			else // Errore generico, togliamo il seriale salvato nell'array
+			else
 			{
 				rfid.CancellaSerialeOggi(rfid.getSerialeCorrente());
 				LcdPrintCentered("Errore comunicazione", 0, true, lcd);
 				LcdPrintCentered("col server. Per fa-", 1, true, lcd);
 				LcdPrintCentered("vore contattare", 2, true, lcd);
 				LcdPrintCentered("l'amministratore", 3, true, lcd);
+
 			}
 
-			// Pausa che permette di leggere il msg sull'lcd
 			delay(lcdPause);
 		}
 		else
 		{
 			PlayBuzzer(); // Riproduce un suono
 
-
 			// Stiamo registrando un'uscita, quindi togliamo il seriale
 			// dal nostro rfid, non prima di avere inviato il tutto
 			// al server per segnare l'uscita stessa.
-
-
 			if (SendDataToWebServer(rfid.getSerialeCorrente(),
 				rfid.getRuoloUser(),
 				false,
@@ -240,7 +261,7 @@ entrata: indica se si tratta di un entrata (true) o un'uscita (false)
 idPresenzaUscita: se è un'entrata sarà una stringa vuota, altrimenti sarà l'id mySql dell'entrata precedente
 La funzione restituisce l'id della presenze registrata o '0' se non è riuscito a registrarla
 */
-String SendDataToWebServer(String userSerial,
+int SendDataToWebServer(String userSerial,
 	String ruolo,
 	bool entrata,
 	String idPresenzaUscita)
@@ -248,66 +269,54 @@ String SendDataToWebServer(String userSerial,
 	int httpCode; // Ci serve per verificare che l'invio sia andato a buon fine
 	userSerial.trim(); // Eliminiamo eventuali spazi esterni della stringa
 
-	String urlToServer = ""; // url per inviare i dati al server HTTP esterno
+	String urlToServer = "";
 
 	if (entrata)
 	{
+		//Serial.println("Entrata");
 		urlToServer = "http://192.168.0.2/NidoCellini/src/php/RegEntry.php?seriale="
 			+ userSerial
 			+ "&ruolo=" + ruolo
 			+ "&entrata=" + entrata
 			+ "&idPresenzaUscita=" + idPresenzaUscita;
+		//Serial.println(urlToServer);
 	}
 	else // Uscita
 	{
+		//Serial.println("Uscita");
 		urlToServer = "http://192.168.0.2/NidoCellini/src/php/RegEntry.php?seriale="
 			+ userSerial
 			+ "&ruolo=" + ruolo
 			+ "&entrata=" + entrata
 			+ "&idPresenzaUscita=" + idPresenzaUscita;
+		//Serial.println(urlToServer);
 	}
 
 	httpC.begin(urlToServer); // Apriamo una connessione http verso il server
 
 	httpCode = httpC.GET(); // Inviamo la richiesta GET, usando i suoi parametri per registrare la presenza
+	String httpResponse = httpC.getString();
+	//Serial.println(httpResponse);
+	String Tmp = EstraiValoreParametro(httpResponse, "seriale");
+
+	Serial.print("Dopo EstraiValore: ");
+	Serial.println(Tmp);
+	//Serial.println(EstraiValoreParametro(httpResponse, "seriale"));
 	
+	Serial.println("");
 	// httpCode sarà negativo se c'e' stato un errore
 	if (httpCode > 0)
 	{
-		// Se il server ha risposto positivamente
+		// Se il server
 		if (httpCode == HTTP_CODE_OK)
 		{
-			if (entrata)
-			{
-				String httpResponso = httpC.getString();
-				String idPresenzaRegistrata = EstraiValoreParametro(httpResponso, "idPresenza");
-				
-				String serialeRegistrato = EstraiValoreParametro(httpResponso, "seriale");
-				
-				// Il seriale non era associato ad alcun utente, 
-				// restituiamo "NO_SERIALE" ed usciamo
-				if (serialeRegistrato == "NO_SERIALE")
-				{
-					httpC.end();
-					return "NO_SERIALE";
-				}
-				else
-				{
-					rfid.SetIdPresenza(userSerial, idPresenzaRegistrata);
-					httpC.end();
-					return idPresenzaRegistrata;
-				}
-
-				
-			}
-
 			httpC.end();
 
-			return "";
+			return true;
 		}
 		// Altrimenti false
 		httpC.end();
-		return "";
+		return 0;
 	}
 	else
 	{
@@ -315,7 +324,7 @@ String SendDataToWebServer(String userSerial,
 		Serial.printf("[HTTP] GET... fallito. Errore: %s\n",
 			httpC.errorToString(httpCode).c_str());
 		httpC.end();
-		return "";
+		return 0;
 	}
 	httpC.end();
 }

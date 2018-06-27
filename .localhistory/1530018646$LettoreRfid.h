@@ -29,8 +29,6 @@ public:
 	bool BadgeRilevato();
 	uint8_t ScriviNuovoBadge(String testoNome, String testoRuolo, String testoSesso);
 
-	// Funzione che associa ad un seriale già inserito con una entrata, l'id presenza
-	// del database mySql. Useremo l'id per l'uscita
 	bool SetIdPresenza(String seriale, String idPresenza);
 
 	String getNomeUser();
@@ -57,11 +55,10 @@ public:
 	String GetIdPresenzaFromSeriale(String paramSeriale);
 
 private:
-	// Array bidimensionale che contiene i seriali inseriti in questa sessione
-	// La prima colonna contiene i seriali mentre 
-	// la seconda contiene gli idPresenza dei mySQL
-	String strArrayUid[MAX_USERS][2];
 	
+	String strArrayUid[MAX_USERS][2]; //Array che contiene i seriali inseriti finora
+	bool PulisciBlocco(byte block);
+
 	bool ScriviBlocco(byte block, String stringa);
 
 	String LeggiBlocco(byte block);
@@ -92,8 +89,8 @@ private:
 	
 	bool badgeDaRegistrare = false;
 
-	bool NuovaRilevazione = false;
 
+	bool NuovaRilevazione = false;
 	void SetNuovaRilevazione(String tmpSerial);
 
 	void resetMembers();

@@ -61,11 +61,11 @@ void LcdPrintCentered(String testo, uint8_t riga, bool spcBegin, LiquidCrystal_I
 	}
 
 	// Arrivati qui il nostro testo sarà di venti caratteri, con spazi iniziali se necessario
-	// Ci posizioniamo sulla prima colonna e sulla riga passata come parametro.
-	// Quindi visualizziamo la stringa "testo"
 	lcd.setCursor(0, riga);
 	lcd.print(testo);
 }
+
+
 
 // Estrai il valore di un parametro da una stringa contenente
 // uno o più parametri (tuttiParametri).
@@ -108,6 +108,7 @@ String EstraiValoreParametro(String tuttiParametri, String paramChiave)
 		{
 			return "NESSUNA_CHIAVE";
 		}
+		
 	}
 	else
 	{
@@ -134,9 +135,10 @@ void PlayBuzzer(){
 	noTone(piezoPin);
 }
 
+
 // Riavviamo il microcontrollore ESP8266.
-// Per un bug dello stesso è necessario fare un power cycle
-// (togliere e rimettere l'alimentazione)
+// Per un bug è necessario fare un power cycle
+// (togliere e rimettere la corrente)
 // per far funzionare a dovere il comando
 void ResetLettore()
 {

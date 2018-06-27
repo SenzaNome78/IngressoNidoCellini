@@ -61,58 +61,34 @@ void LcdPrintCentered(String testo, uint8_t riga, bool spcBegin, LiquidCrystal_I
 	}
 
 	// Arrivati qui il nostro testo sarà di venti caratteri, con spazi iniziali se necessario
-	// Ci posizioniamo sulla prima colonna e sulla riga passata come parametro.
-	// Quindi visualizziamo la stringa "testo"
 	lcd.setCursor(0, riga);
 	lcd.print(testo);
 }
 
+
+
 // Estrai il valore di un parametro da una stringa contenente
 // uno o più parametri (tuttiParametri).
 // tuttiParametri deve essere così formata:
-// ?primoParamChiave=primoParamValore&secondoParamChiave=secondoParamValore&...&
-// punto interrogativo iniziale, = divide chiave da valore, & divide parametri, & chiude stringa
+// ?primoParamChiave=primoParamValore&secondoParamChiave=secondoParamValore&...!
+// punto interrogativo iniziale, = divide chiave da valore, & divide parametri, ! chiude stringa
 // tuttiParametri: Contiene tutti i parametri da cui estrarne uno
 // paramChiave: nome della chiave da cui trarre il valore
-// restituisce il valore richiesto, STRINGA_MAL_FORMATA se la stringa tutti i paramentri
-// era mal formata (vedere in alto) oppure NESSUNA_CHIAVE se non abbiamo trovato nessuna chiave
+// restituisce il valore richiesto o "" se non trovato o si è verificato un errore
 String EstraiValoreParametro(String tuttiParametri, String paramChiave)
 {
 	Serial.print("Inizio EstraiValore: ");
 	Serial.println(tuttiParametri);
-
-	int posChiave = 0; // posizione della chiave del nostro parametro
-	int posValue = 0; // la posizione del nostro valore
-	String valore = ""; // Il valore che stavamo cercando
-
 	// Analizziamo la stringa tuttiParametri per vedere se è ben formata
-	if ((tuttiParametri.startsWith("?")) && (tuttiParametri.endsWith("&")) && (tuttiParametri.indexOf("=") != -1))
+	if ((tuttiParametri.startsWith("?")) && (tuttiParametri.endsWith("!")) && (tuttiParametri.indexOf("=") != -1))
 	{
-		// Rimuovo il punto interrogativo iniziale
+
+		Serial.println("stringa ben formata");
 		tuttiParametri.remove(0, 1);
-
-		posChiave = tuttiParametri.indexOf(paramChiave); // posizione della chiave
-
-		if (posChiave != -1) // abbiamo trovato la nostra chiave
-		{
-			// Posizione del nostro valore
-			posValue = posChiave + paramChiave.length() + 1;
-			
-			// Il nostro valore viene estratto da tuttiParametri, partendo da posValue
-			// e arrivando al primo "&" dopo posValue che troviamo
-			valore = tuttiParametri.substring(posValue, tuttiParametri.indexOf("&", posValue));
-			
-			return valore;
-		}
-		else // La chiave che cercavamo non era presente
-		{
-			return "NESSUNA_CHIAVE";
-		}
+		return tuttiParametri;
 	}
-	else
-	{
-		return "STRINGA_MAL_FORMATA";
-	}
+
+	return "";
 }
 
 // Funzione che fa emettere un suono al nostro buzzer
@@ -134,9 +110,10 @@ void PlayBuzzer(){
 	noTone(piezoPin);
 }
 
+
 // Riavviamo il microcontrollore ESP8266.
-// Per un bug dello stesso è necessario fare un power cycle
-// (togliere e rimettere l'alimentazione)
+// Per un bug è necessario fare un power cycle
+// (togliere e rimettere la corrente)
 // per far funzionare a dovere il comando
 void ResetLettore()
 {

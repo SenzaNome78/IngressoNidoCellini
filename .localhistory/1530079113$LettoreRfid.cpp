@@ -9,7 +9,7 @@ LettoreRfid::LettoreRfid() :
 	mfrc522(SS_PIN, RST_PIN)
 {
 	SPI.begin();
-	mfrc522.PCD_Init();  
+	mfrc522.PCD_Init();   // Init MFRC522
 
 	// Inizializzo l'array contenente i seriali inseriti e l'id delle presenze
 	for (int i = 0; i < MAX_USERS; i++)
@@ -29,8 +29,10 @@ LettoreRfid::LettoreRfid() :
  */
 bool LettoreRfid::BadgeRilevato()
 {
+
 	if (mfrc522.PICC_IsNewCardPresent())
 	{
+
 		resetMembers();
 		if (mfrc522.PICC_ReadCardSerial())
 		{
@@ -43,7 +45,6 @@ bool LettoreRfid::BadgeRilevato()
 			}
 			setSerialeCorrente(tmpSerial);
 			
-			// Leggiamo questi valori dal badge
 			nomeUser = LeggiBlocco(bloccoNome);
 			ruoloUser = LeggiBlocco(bloccoRuolo);
 			sessoUser = LeggiBlocco(bloccoSesso);
@@ -51,6 +52,7 @@ bool LettoreRfid::BadgeRilevato()
 			// Funzione che si occupa della registrazione del seriale
 			SetNuovaRilevazione(tmpSerial);
 			
+
 			mfrc522.PCD_StopCrypto1();
 			mfrc522.PICC_HaltA();
 
@@ -93,6 +95,7 @@ String LettoreRfid::LeggiBlocco(byte numBlocco)
 	byte bufferLen = 18;
 	// array per lavorare con i dati ottenuti dal badge (deve essere minimo 18 byte)
 	byte buffer1[18];
+	byte buffer2[18];
 
 	// Legge il nome dello user dalla PICC e lo deposita in buffer1
 	status = mfrc522.MIFARE_Read(numBlocco, buffer1, &bufferLen);
@@ -134,7 +137,7 @@ void LettoreRfid::SetNuovaRilevazione(String tmpSerial)
 	setSerialeCorrente(tmpSerial);
 
 	// Se il seriale è già presente in questa sessione
-	// imposta NuovaRilevazione a false ed esce dalla funzione
+	// Setta NuovaRilevazione a false ed esce dalla funzione
 	for (byte i = 0; i < MAX_USERS; i++)
 	{
 		if (strArrayUid[i][0] == getSerialeCorrente())
@@ -163,6 +166,7 @@ void LettoreRfid::SetNuovaRilevazione(String tmpSerial)
  */
 uint8_t LettoreRfid::ScriviNuovoBadge(String testoNome, String testoRuolo, String testoSesso)
 {
+	
 	if (mfrc522.PICC_IsNewCardPresent())
 	{
 		resetMembers();
@@ -176,8 +180,9 @@ uint8_t LettoreRfid::ScriviNuovoBadge(String testoNome, String testoRuolo, Strin
 				tmpSerial += String(mfrc522.uid.uidByte[i]);
 			}
 			setSerialeCorrente(tmpSerial);
-			
-			// Scriviamo nei blocchi di memmoria del badge
+			Serial.println("In LettoreRfid::ScirivNuovoBadge");
+			Serial.println(tmpSerial);
+			// Scriviamo nei blocchi di mem del badge
 			// i parametri passati a questa funzione
 			ScriviBlocco(bloccoNome, testoNome);
 			ScriviBlocco(bloccoRuolo, testoRuolo);
@@ -186,15 +191,12 @@ uint8_t LettoreRfid::ScriviNuovoBadge(String testoNome, String testoRuolo, Strin
 			mfrc522.PCD_StopCrypto1();
 			mfrc522.PICC_HaltA();
 
-			// Il badge è stato letto correttamente
 			return NEW_BADGE_OK;
 		}
 		else
 		{
 			mfrc522.PCD_StopCrypto1();
 			mfrc522.PICC_HaltA();
-
-			// La lettura del badge non è riuscita
 			return NEW_BADGE_ERR;
 		}
 	}
@@ -202,14 +204,10 @@ uint8_t LettoreRfid::ScriviNuovoBadge(String testoNome, String testoRuolo, Strin
 	{
 		mfrc522.PCD_StopCrypto1();
 		mfrc522.PICC_HaltA();
-
-		// Siamo in attesa di un badge
 		return NEW_BADGE_ATTESA;
 	}
 }
 
-// Funzione che trova l'id della presenza registrato nel nostro lettore
-// Come parametro richiede il seriale del badge
 String LettoreRfid::GetIdPresenzaFromSeriale(String paramSeriale)
 {
 	for (int i = 0; i < MAX_USERS; i++)
@@ -222,10 +220,11 @@ String LettoreRfid::GetIdPresenzaFromSeriale(String paramSeriale)
 	return "";
 }
 
-// Funzione che associa ad un seriale già inserito con una entrata, l'id presenza
+// Funzione che associa ad un seriale già inserito con una entrata l'id presenza
 // del database mySql. Useremo l'id per l'uscita
  bool LettoreRfid::SetIdPresenza(String seriale, String idPresenza)
  {
+	 
 	 setIdPresenzaCorrente(idPresenza);
 
 	 for (byte i = 0; i < MAX_USERS; i++)
@@ -281,6 +280,38 @@ bool LettoreRfid::ScriviBlocco(byte block, String stringa)
 		return false;
 	}
 
+	return true;
+}
+
+bool LettoreRfid::PulisciBlocco(byte block)
+{
+	Serial.println("IN pulisci blocco01");
+	byte buffer1[16];
+	// Ripulisci i blocchi di memoria usando un buffer vuoto
+	for (uint8_t i = 0; i < 16; i++)
+	{
+		buffer1[i] = 0;
+	}
+	Serial.println("IN pulisci blocco02");
+	status = mfrc522.MIFARE_Write(block, buffer1, 16);
+	Serial.println("IN pulisci blocco03");
+	if (status != MFRC522::STATUS_OK) // Non siamo riusciti a scrivere il nome
+	{
+		Serial.print("Pulizia fallita: ");
+		Serial.println(mfrc522.GetStatusCodeName(status));
+
+		return false;
+	}
+	Serial.println("IN pulisci blocco04");
+	for (int i = 0; i < 16; ++i)
+	{
+		Serial.print("buffer[");
+		Serial.print(i);
+		Serial.print("]: ");
+		Serial.println(char(buffer1[i]));
+
+	}
+	Serial.println("IN pulisci blocco05");
 	return true;
 }
 

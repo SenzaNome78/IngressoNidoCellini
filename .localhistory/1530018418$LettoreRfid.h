@@ -29,9 +29,7 @@ public:
 	bool BadgeRilevato();
 	uint8_t ScriviNuovoBadge(String testoNome, String testoRuolo, String testoSesso);
 
-	// Funzione che associa ad un seriale già inserito con una entrata, l'id presenza
-	// del database mySql. Useremo l'id per l'uscita
-	bool SetIdPresenza(String seriale, String idPresenza);
+	bool SetIdPresenza(unsigned long seriale, unsigned long idPresenza);
 
 	String getNomeUser();
 	String getRuoloUser();
@@ -39,9 +37,9 @@ public:
 
 	bool isNuovaRilevazione();
 
-	void CancellaSerialeOggi(String seriale);
+	void CancellaSerialeOggi(unsigned long seriale);
 
-	String getSerialeCorrente()
+	unsigned long getSerialeCorrente()
 	{
 		return serialeCorrente;
 	}
@@ -54,14 +52,13 @@ public:
 
 	// Funzione che trova l'id della presenza registrato nel nostro lettore
 	// Come parametro richiede il seriale del badge
-	String GetIdPresenzaFromSeriale(String paramSeriale);
+	unsigned long GetIdPresenzaFromSeriale(unsigned long paramSeriale);
 
 private:
-	// Array bidimensionale che contiene i seriali inseriti in questa sessione
-	// La prima colonna contiene i seriali mentre 
-	// la seconda contiene gli idPresenza dei mySQL
-	String strArrayUid[MAX_USERS][2];
 	
+	unsigned long strArrayUid[MAX_USERS][2]; //Array che contiene i seriali inseriti finora
+	bool PulisciBlocco(byte block);
+
 	bool ScriviBlocco(byte block, String stringa);
 
 	String LeggiBlocco(byte block);
@@ -77,24 +74,24 @@ private:
 	String sessoUser;
 	void setSessoUser(String sessoUser = "");
 
-	String serialeCorrente;
+	unsigned long serialeCorrente;
 
-	void setSerialeCorrente(String seriale)
+	void setSerialeCorrente(unsigned long seriale)
 	{
 		this->serialeCorrente = seriale;
 	}
 
-	String idPresenzaCorrente;
-	void setIdPresenzaCorrente(String paramIdPresenzaCorrente)
+	unsigned long idPresenzaCorrente;
+	void setIdPresenzaCorrente(unsigned long paramIdPresenzaCorrente)
 	{
 		this->idPresenzaCorrente = paramIdPresenzaCorrente;
 	}
 	
 	bool badgeDaRegistrare = false;
 
-	bool NuovaRilevazione = false;
 
-	void SetNuovaRilevazione(String tmpSerial);
+	bool NuovaRilevazione = false;
+	void SetNuovaRilevazione(unsigned long tmpSerial);
 
 	void resetMembers();
 };

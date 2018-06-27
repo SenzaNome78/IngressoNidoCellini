@@ -92,8 +92,8 @@ private:
 	
 	bool badgeDaRegistrare = false;
 
-	bool NuovaRilevazione = false;
 
+	bool NuovaRilevazione = false;
 	void SetNuovaRilevazione(String tmpSerial);
 
 	void resetMembers();

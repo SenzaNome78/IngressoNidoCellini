@@ -61,11 +61,11 @@ void LcdPrintCentered(String testo, uint8_t riga, bool spcBegin, LiquidCrystal_I
 	}
 
 	// Arrivati qui il nostro testo sarà di venti caratteri, con spazi iniziali se necessario
-	// Ci posizioniamo sulla prima colonna e sulla riga passata come parametro.
-	// Quindi visualizziamo la stringa "testo"
 	lcd.setCursor(0, riga);
 	lcd.print(testo);
 }
+
+
 
 // Estrai il valore di un parametro da una stringa contenente
 // uno o più parametri (tuttiParametri).
@@ -90,24 +90,23 @@ String EstraiValoreParametro(String tuttiParametri, String paramChiave)
 	{
 		// Rimuovo il punto interrogativo iniziale
 		tuttiParametri.remove(0, 1);
+		// Rimuovo il punto esclamativo finale
+		//tuttiParametri.remove(tuttiParametri.length()-1);
 
 		posChiave = tuttiParametri.indexOf(paramChiave); // posizione della chiave
-
+		Serial.println(posChiave);
 		if (posChiave != -1) // abbiamo trovato la nostra chiave
 		{
-			// Posizione del nostro valore
-			posValue = posChiave + paramChiave.length() + 1;
-			
-			// Il nostro valore viene estratto da tuttiParametri, partendo da posValue
-			// e arrivando al primo "&" dopo posValue che troviamo
-			valore = tuttiParametri.substring(posValue, tuttiParametri.indexOf("&", posValue));
-			
-			return valore;
+			posValue = posChiave + paramChiave.length() + 2;
+			Serial.println(posValue);
+			valore = paramChiave.substring(posValue), tuttiParametri.indexOf("&", posValue);
+			Serial.println(valore);
 		}
 		else // La chiave che cercavamo non era presente
 		{
 			return "NESSUNA_CHIAVE";
 		}
+		return valore;
 	}
 	else
 	{
@@ -134,9 +133,10 @@ void PlayBuzzer(){
 	noTone(piezoPin);
 }
 
+
 // Riavviamo il microcontrollore ESP8266.
-// Per un bug dello stesso è necessario fare un power cycle
-// (togliere e rimettere l'alimentazione)
+// Per un bug è necessario fare un power cycle
+// (togliere e rimettere la corrente)
 // per far funzionare a dovere il comando
 void ResetLettore()
 {
