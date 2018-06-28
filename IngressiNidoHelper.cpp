@@ -78,8 +78,6 @@ void LcdPrintCentered(String testo, uint8_t riga, bool spcBegin, LiquidCrystal_I
 // era mal formata (vedere in alto) oppure NESSUNA_CHIAVE se non abbiamo trovato nessuna chiave
 String EstraiValoreParametro(String tuttiParametri, String paramChiave)
 {
-	Serial.print("Inizio EstraiValore: ");
-	Serial.println(tuttiParametri);
 
 	int posChiave = 0; // posizione della chiave del nostro parametro
 	int posValue = 0; // la posizione del nostro valore

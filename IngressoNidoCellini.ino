@@ -39,7 +39,7 @@ String AttivaModScrittura(String nomeNuovoBadge, String ruoloNuovoBadge, String 
 // Variabili temporali per l'attesa nella scrittura badge e
 // nel collegarsi alla rete WIFI
 long tempoAttesaBadgeXScrittura = 0;
-const long tempoTotaleAttesaBadgeXScrittura = 10000;
+const long tempoTotaleAttesaBadgeXScrittura = 60000;
 
 
 void setup()
@@ -72,7 +72,6 @@ void setup()
 	{
 		if (tempoAttesaBadgeXScrittura < 1)
 		{
-
 			LcdPrintCentered("Errore collegamento", 0, true, lcd);
 			LcdPrintCentered("alla rete WiFi.", 1, true, lcd);
 			LcdPrintCentered("Contattare", 2, true, lcd);
