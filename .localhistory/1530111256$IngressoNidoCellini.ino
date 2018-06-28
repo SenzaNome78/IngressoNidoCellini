@@ -77,8 +77,6 @@ void setup()
 			LcdPrintCentered("alla rete WiFi.", 1, true, lcd);
 			LcdPrintCentered("Contattare", 2, true, lcd);
 			LcdPrintCentered("l'amministratore", 3, true, lcd);
-			delay(lcdPause);
-			tempoAttesaBadgeXScrittura = tempoTotaleAttesaBadgeXScrittura;
 			continue;
 		}
 		LcdPrintCentered("In attesa del", 0, true, lcd);
@@ -167,8 +165,8 @@ void loop()
 			{
 				LcdPrintCentered("L'entrata di", 0, true, lcd);
 				LcdPrintCentered(rfid.getNomeUser(), 1, true, lcd);
-				LcdPrintCentered("e' stata registrata.", 2, true, lcd);
-				LcdPrintCentered("Buona giornata.", 3, true, lcd);
+				LcdPrintCentered("e' stata registrata", 2, true, lcd);
+				LcdPrintCentered("Buona giornata", 3, true, lcd);
 			}
 			// Il seriale non era associato a nessun utente.
 			// visualizziamo un messaggio sull'lcd
@@ -211,10 +209,10 @@ void loop()
 
 				rfid.CancellaSerialeOggi(rfid.getSerialeCorrente());
 
-				LcdPrintCentered("Arrivederci", 0, true, lcd);
+				LcdPrintCentered("Ciao", 0, true, lcd);
 				LcdPrintCentered(rfid.getNomeUser(), 1, true, lcd);
 				LcdPrintCentered("A presto e", 2, true, lcd);
-				LcdPrintCentered("buona giornata.", 3, true, lcd);
+				LcdPrintCentered("buona giornata!", 3, true, lcd);
 			}
 			else
 			{
@@ -231,10 +229,10 @@ void loop()
 	}
 	else // Se nessun badge viene avvicinato visualizza un messaggio ed esci dal loop
 	{
-		LcdPrintCentered("Buongiorno.", 0, true, lcd);
+		LcdPrintCentered("Buongiorno!", 0, true, lcd);
 		LcdPrintCentered("Per favore", 1, true, lcd);
-		LcdPrintCentered("avvicini il badge.", 2, true, lcd);
-		LcdPrintCentered("Grazie.", 3, true, lcd);
+		LcdPrintCentered("Avvicini il badge", 2, true, lcd);
+		LcdPrintCentered("Grazie!", 3, true, lcd);
 		return;
 	}
 }
@@ -259,7 +257,7 @@ String SendDataToWebServer(String userSerial,
 
 	if (entrata)
 	{
-		urlToServer = "http://192.168.0.7/NidoCellini/src/php/RegEntry.php?seriale="
+		urlToServer = "http://192.168.0.2/NidoCellini/src/php/RegEntry.php?seriale="
 			+ userSerial
 			+ "&ruolo=" + ruolo
 			+ "&entrata=" + entrata
@@ -267,7 +265,7 @@ String SendDataToWebServer(String userSerial,
 	}
 	else // Uscita
 	{
-		urlToServer = "http://192.168.0.7/NidoCellini/src/php/RegEntry.php?seriale="
+		urlToServer = "http://192.168.0.2/NidoCellini/src/php/RegEntry.php?seriale="
 			+ userSerial
 			+ "&ruolo=" + ruolo
 			+ "&entrata=" + entrata

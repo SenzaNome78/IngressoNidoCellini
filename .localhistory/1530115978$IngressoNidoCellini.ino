@@ -212,7 +212,7 @@ void loop()
 				rfid.CancellaSerialeOggi(rfid.getSerialeCorrente());
 
 				LcdPrintCentered("Arrivederci", 0, true, lcd);
-				LcdPrintCentered(rfid.getNomeUser(), 1, true, lcd);
+				LcdPrintCentered(rfid.getNomeUser() + ".", 1, true, lcd);
 				LcdPrintCentered("A presto e", 2, true, lcd);
 				LcdPrintCentered("buona giornata.", 3, true, lcd);
 			}
@@ -259,7 +259,7 @@ String SendDataToWebServer(String userSerial,
 
 	if (entrata)
 	{
-		urlToServer = "http://192.168.0.7/NidoCellini/src/php/RegEntry.php?seriale="
+		urlToServer = "http://192.168.0.2/NidoCellini/src/php/RegEntry.php?seriale="
 			+ userSerial
 			+ "&ruolo=" + ruolo
 			+ "&entrata=" + entrata
@@ -267,7 +267,7 @@ String SendDataToWebServer(String userSerial,
 	}
 	else // Uscita
 	{
-		urlToServer = "http://192.168.0.7/NidoCellini/src/php/RegEntry.php?seriale="
+		urlToServer = "http://192.168.0.2/NidoCellini/src/php/RegEntry.php?seriale="
 			+ userSerial
 			+ "&ruolo=" + ruolo
 			+ "&entrata=" + entrata
