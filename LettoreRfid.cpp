@@ -9,7 +9,7 @@ LettoreRfid::LettoreRfid() :
 	mfrc522(SS_PIN, RST_PIN)
 {
 	SPI.begin();
-	mfrc522.PCD_Init();  
+	mfrc522.PCD_Init();
 
 	// Inizializzo l'array contenente i seriali inseriti e l'id delle presenze
 	for (int i = 0; i < MAX_USERS; i++)
@@ -42,7 +42,7 @@ bool LettoreRfid::BadgeRilevato()
 				tmpSerial += String(mfrc522.uid.uidByte[i]);
 			}
 			setSerialeCorrente(tmpSerial);
-			
+
 			// Leggiamo questi valori dal badge
 			nomeUser = LeggiBlocco(bloccoNome);
 			ruoloUser = LeggiBlocco(bloccoRuolo);
@@ -50,7 +50,7 @@ bool LettoreRfid::BadgeRilevato()
 
 			// Funzione che si occupa della registrazione del seriale
 			SetNuovaRilevazione(tmpSerial);
-			
+
 			mfrc522.PCD_StopCrypto1();
 			mfrc522.PICC_HaltA();
 
@@ -73,9 +73,9 @@ bool LettoreRfid::BadgeRilevato()
 	}
 }
 
-/*
- *  Legge un blocco e ritorna la stringa in esso contenuta
- */
+// Legge un blocco di memoria da un badge
+// block è il numero del blocco da leggere
+// restituisce la stringa contenuta nel blocco
 String LettoreRfid::LeggiBlocco(byte numBlocco)
 {
 	MFRC522::MIFARE_Key key = { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF };
@@ -117,6 +117,9 @@ String LettoreRfid::LeggiBlocco(byte numBlocco)
 
 }
 
+// Registra una nuova presenza se non già inserita
+// NuovaRilevazione viene impostata true o false se
+// si tratta di un nuovo inserimento o meno
 void LettoreRfid::SetNuovaRilevazione(String tmpSerial)
 {
 	// Il badge non conteneva uno dei campi, esci e setta la variabile
@@ -176,13 +179,13 @@ uint8_t LettoreRfid::ScriviNuovoBadge(String testoNome, String testoRuolo, Strin
 				tmpSerial += String(mfrc522.uid.uidByte[i]);
 			}
 			setSerialeCorrente(tmpSerial);
-			
+
 			// Scriviamo nei blocchi di memmoria del badge
 			// i parametri passati a questa funzione
 			ScriviBlocco(bloccoNome, testoNome);
 			ScriviBlocco(bloccoRuolo, testoRuolo);
 			ScriviBlocco(bloccoSesso, testoSesso);
-			
+
 			mfrc522.PCD_StopCrypto1();
 			mfrc522.PICC_HaltA();
 
@@ -224,22 +227,24 @@ String LettoreRfid::GetIdPresenzaFromSeriale(String paramSeriale)
 
 // Funzione che associa ad un seriale già inserito con una entrata, l'id presenza
 // del database mySql. Useremo l'id per l'uscita
- bool LettoreRfid::SetIdPresenza(String seriale, String idPresenza)
- {
-	 setIdPresenzaCorrente(idPresenza);
+bool LettoreRfid::SetIdPresenza(String seriale, String idPresenza)
+{
+	setIdPresenzaCorrente(idPresenza);
 
-	 for (byte i = 0; i < MAX_USERS; i++)
-	 {
-		 if (strArrayUid[i][0] == seriale)
-		 {
-			 strArrayUid[i][1] = idPresenza;
-			 return true;
-		 }
-	 }
+	for (byte i = 0; i < MAX_USERS; i++)
+	{
+		if (strArrayUid[i][0] == seriale)
+		{
+			strArrayUid[i][1] = idPresenza;
+			return true;
+		}
+	}
 
-	 return false;
- }
-
+	return false;
+}
+// Scrive un blocco di memoria in un badge
+// block è il numero del blocco da scrivere
+// stringa è la stringa che vogliamo memorizzare
 bool LettoreRfid::ScriviBlocco(byte block, String stringa)
 {
 	MFRC522::MIFARE_Key key = { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF };
@@ -284,6 +289,7 @@ bool LettoreRfid::ScriviBlocco(byte block, String stringa)
 	return true;
 }
 
+// Imposta i membri temporanei come stringhe vuote
 void LettoreRfid::resetMembers()
 {
 	nomeUser = "";
@@ -291,6 +297,7 @@ void LettoreRfid::resetMembers()
 	sessoUser = "";
 	serialeCorrente = "";
 }
+
 
 LettoreRfid::~LettoreRfid()
 {
@@ -333,6 +340,7 @@ bool LettoreRfid::isNuovaRilevazione()
 	return NuovaRilevazione;
 }
 
+// Cancella un seriale dall'array
 void LettoreRfid::CancellaSerialeOggi(String seriale)
 {
 	for (byte i = 0; i < MAX_USERS; i++)
@@ -343,6 +351,18 @@ void LettoreRfid::CancellaSerialeOggi(String seriale)
 			strArrayUid[i][1] = "";
 			return;
 		}
+	}
+}
+
+// Svuota l'array delle presenze
+void LettoreRfid::AzzeraPresenze()
+{
+	for (byte i = 0; i < MAX_USERS; i++)
+	{
+		strArrayUid[i][0] = "";
+		strArrayUid[i][1] = "";
+		return;
+
 	}
 }
 

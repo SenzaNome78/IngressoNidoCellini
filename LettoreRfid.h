@@ -26,48 +26,52 @@ public:
 	const static uint8_t NEW_BADGE_ERR = 2;
 	const static uint8_t NEW_BADGE_ATTESA = 3;
 
-	bool BadgeRilevato();
-	uint8_t ScriviNuovoBadge(String testoNome, String testoRuolo, String testoSesso);
+	// Metodi di accesso publici
+	String getNomeUser();
+	String getRuoloUser();
+	String getSessoUser();
+	bool GetBadgeDaRegistrare();
+	void SetBadgeDaRegistrare(bool val);
+	bool isNuovaRilevazione();
+	String getSerialeCorrente()
+	{
+		return serialeCorrente;
+	}
+	// FINE metodi di accesso publici
+
 
 	// Funzione che associa ad un seriale già inserito con una entrata, l'id presenza
 	// del database mySql. Useremo l'id per l'uscita
 	bool SetIdPresenza(String seriale, String idPresenza);
 
-	String getNomeUser();
-	String getRuoloUser();
-	String getSessoUser();
-
-	bool isNuovaRilevazione();
-
+	// Cancella un seriale dall'array
 	void CancellaSerialeOggi(String seriale);
 
-	String getSerialeCorrente()
-	{
-		return serialeCorrente;
-	}
+	// Rileva se un badge è stato avvicinato al lettore.
+	bool BadgeRilevato();
 
-	bool GetBadgeDaRegistrare();
-	
-	
-	void SetBadgeDaRegistrare(bool val);
-	
+	//Scriviamo un nuovo badge con il nome e il ruolo inviatoci dal server web
+	uint8_t ScriviNuovoBadge(String testoNome, String testoRuolo, String testoSesso);
 
 	// Funzione che trova l'id della presenza registrato nel nostro lettore
 	// Come parametro richiede il seriale del badge
 	String GetIdPresenzaFromSeriale(String paramSeriale);
 
+	// Svuota l'array delle presenze
+	void AzzeraPresenze();
 private:
+	// Inizio membri e loro metodi di accesso (privati)
+
 	// Array bidimensionale che contiene i seriali inseriti in questa sessione
 	// La prima colonna contiene i seriali mentre 
 	// la seconda contiene gli idPresenza dei mySQL
 	String strArrayUid[MAX_USERS][2];
-	
-	bool ScriviBlocco(byte block, String stringa);
+	String serialeCorrente;
 
-	String LeggiBlocco(byte block);
-		
+	bool badgeDaRegistrare = false;
+	bool NuovaRilevazione = false;
+
 	MFRC522 mfrc522; // Istanza del nostro lettore RFID
-
 	String nomeUser;
 	void setNomeUser(String nomeUser = "");
 
@@ -77,26 +81,40 @@ private:
 	String sessoUser;
 	void setSessoUser(String sessoUser = "");
 
-	String serialeCorrente;
-
 	void setSerialeCorrente(String seriale)
 	{
 		this->serialeCorrente = seriale;
 	}
 
 	String idPresenzaCorrente;
+
 	void setIdPresenzaCorrente(String paramIdPresenzaCorrente)
 	{
 		this->idPresenzaCorrente = paramIdPresenzaCorrente;
 	}
-	
-	bool badgeDaRegistrare = false;
+	// FINE membri e loro metodi di accesso (privati)
 
-	bool NuovaRilevazione = false;
+	// Scrive un blocco di memoria in un badge
+	// block è il numero del blocco da scrivere
+	// stringa è la stringa che vogliamo memorizzare
+	bool ScriviBlocco(byte block, String stringa);
 
+	// Legge un blocco di memoria da un badge
+	// block è il numero del blocco da leggere
+	// restituisce la stringa contenuta nel blocco
+	String LeggiBlocco(byte block);
+
+
+
+
+	// Registra una nuova presenza se non già inserita
+	// NuovaRilevazione viene impostata true o false se
+	// si tratta di un nuovo inserimento o meno
 	void SetNuovaRilevazione(String tmpSerial);
 
+	// Imposta i membri temporanei come stringhe vuote
 	void resetMembers();
+
 };
 
 
