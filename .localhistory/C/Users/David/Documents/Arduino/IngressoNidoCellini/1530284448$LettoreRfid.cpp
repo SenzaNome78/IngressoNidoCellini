@@ -152,7 +152,7 @@ void LettoreRfid::SetNuovaRilevazione(String tmpSerial)
 	// e lo inseriamo in quel posto
 	for (byte i = 0; i < MAX_USERS; i++)
 	{
-		if (strArrayUid[i][0] == "")
+		if (strArrayUid[i][0] == 0)
 		{
 			strArrayUid[i][0] = getSerialeCorrente();
 			NuovaRilevazione = true;
@@ -360,10 +360,9 @@ void LettoreRfid::AzzeraPresenze()
 	resetMembers();
 	for (byte i = 0; i < MAX_USERS; i++)
 	{
-		//Serial.println(strArrayUid[i][0]);
 		strArrayUid[i][0] = "";
 		strArrayUid[i][1] = "";
-
+		return;
 
 	}
 }

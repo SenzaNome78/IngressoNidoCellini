@@ -126,23 +126,16 @@ void NewBadgeOnIn()
 // far funzionare il reset. Problema noto dell'Esp8266)
 void DiagnosticaOnIn()
 {
-	String comando = wServer.arg("command");
-	Serial.println(comando);
+	Serial.println("IN DIAGNOSTICA ONIN");
 	// Ci assicuriamo che il comando sia stato passato
 	if (wServer.arg("command") != "")
 	{
 		// Avviamo la funzione richiesta
-		if (wServer.arg("command") == "reset")
+		if (wServer.arg("reset"))
 		{
-			LcdPrintCentered("Riavvio del", 0, true, lcd);
-			LcdPrintCentered("lettore in", 1, true, lcd);
-			LcdPrintCentered("corso.", 2, true, lcd);
-			LcdPrintCentered("Attendere prego.", 3, true, lcd);
-
-			delay(500);
 			ResetLettore();
 		}
-		else if (wServer.arg("command") == "azzeraPresenze")
+		else if (wServer.arg("azzeraPresenze"))
 		{
 			rfid.AzzeraPresenze();
 
