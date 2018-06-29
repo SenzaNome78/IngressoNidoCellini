@@ -363,8 +363,6 @@ void LettoreRfid::AzzeraPresenze()
 		//Serial.println(strArrayUid[i][0]);
 		strArrayUid[i][0] = "";
 		strArrayUid[i][1] = "";
-
-
 	}
 }
 
