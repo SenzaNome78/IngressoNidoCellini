@@ -10,15 +10,13 @@
 LettoreRfid rfid; // Istanza della classe LettoreRfid
 LiquidCrystal_I2C lcd(0x27, 20, 4); // instanza per gestire l'lcd
 
-const int lcdPause = 4000; // Pausa per il testo dell'lcd
+const int lcdPause = 4000; // Millesimi di secondo di pausa, per visualizzare il testo dell'lcd
 
-// Costanti contenenti gli ssid e password per il wifi
+// Costanti contenenti ssid e password per il wifi
 const char ssidSTA[] = "NidoCellini";			//ssid della rete
-const char passwordSTA[] = "NidoCelliniPass";		//password della rete
+const char passwordSTA[] = "NidoCelliniPass";	//password della rete
 
-WiFiServer webServer(80);	// Usiamo questo server per registrare nuovi bambini o educatori
-
-HTTPClient httpC;				// Usiamo il client http per comunicare le presenze al server
+HTTPClient httpC;				// Usiamo il client http per comunicare le presenze al server Apache/mySQL
 ESP8266WebServer wServer(80);	// Server http principale
 
 // Server http usato per interrompere la registrazione di un nuovo badge
@@ -35,20 +33,20 @@ String SendDataToWebServer(String userSerial,
 // Funzione associa ad un badge l'utente che ci viene passato dal server
 String AttivaModScrittura(String nomeNuovoBadge, String ruoloNuovoBadge, String sessoNuovoBadge);
 
-
 // Variabili temporali per l'attesa nella scrittura badge e
 // nel collegarsi alla rete WIFI
 long tempoAttesaBadgeXScrittura = 0;
 const long tempoTotaleAttesaBadgeXScrittura = 60000;
 
+/* FINE DICHIARAZIONI VARIABILI E FUNZIONI */
 
 void setup()
 {
 	Serial.begin(115200);   // Prepariamo la seriale
 	
 	// **********Init LCD**************
-	lcd.init();  //inizializiamo l'lcd
-	lcd.backlight();  // Accendiamo la luce di sfondo dell'lcd
+	lcd.init();			// Inizializiamo l'lcd
+	lcd.backlight();	// Accendiamo la luce di sfondo dell'lcd
 	// **********Init LCD**************
 
 	// Mac Address del ESP8266
@@ -82,7 +80,7 @@ void setup()
 		}
 		LcdPrintCentered("In attesa del", 0, true, lcd);
 		LcdPrintCentered("collegamento", 1, true, lcd);
-		LcdPrintCentered(" col server.", 2, true, lcd);
+		LcdPrintCentered(" con la rete.", 2, true, lcd);
 		LcdPrintCentered("Attendere prego.", 3, true, lcd);
 		tempoAttesaBadgeXScrittura -= 500;
 
@@ -127,7 +125,7 @@ void NewBadgeOnIn()
 void DiagnosticaOnIn()
 {
 	String comando = wServer.arg("command");
-	Serial.println(comando);
+	
 	// Ci assicuriamo che il comando sia stato passato
 	if (wServer.arg("command") != "")
 	{
@@ -160,7 +158,7 @@ void DiagnosticaOnIn()
 
 void loop()
 {
-	wServer.handleClient(); // Se il server sta contattando il lettore, gestisce gli eventi collegati
+	wServer.handleClient(); // Se il server Apache sta contattando il lettore, gestisce gli eventi collegati
 
 	//*********** INIZIO LETTURA BADGE ***********************************
 	if (rfid.BadgeRilevato()) // Un badge è stato avvicinato al lettore
@@ -229,8 +227,6 @@ void loop()
 			// Stiamo registrando un'uscita, quindi togliamo il seriale
 			// dal nostro rfid, non prima di avere inviato il tutto
 			// al server per segnare l'uscita stessa.
-
-
 			if (SendDataToWebServer(rfid.getSerialeCorrente(),
 				rfid.getRuoloUser(),
 				false,
@@ -263,7 +259,6 @@ void loop()
 		LcdPrintCentered("Per favore", 1, true, lcd);
 		LcdPrintCentered("avvicini il badge.", 2, true, lcd);
 		LcdPrintCentered("Grazie.", 3, true, lcd);
-		return;
 	}
 }
 
@@ -332,15 +327,12 @@ String SendDataToWebServer(String userSerial,
 					httpC.end();
 					return idPresenzaRegistrata;
 				}
-
-				
 			}
 
 			httpC.end();
-
 			return "";
 		}
-		// Altrimenti false
+		
 		httpC.end();
 		return "";
 	}

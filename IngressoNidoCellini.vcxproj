@@ -100,7 +100,7 @@
   </ImportGroup>
   <ProjectExtensions>
     <VisualStudio>
-      <UserProperties debug.view.FreeMemory="" debug.view.AnalogPins="" arduino.upload.port="COM4" debug.view.DigitalPins="" VM.DebugVariablesWindow.ColumnVisibleFunctionName="1" />
+      <UserProperties debug.view.FreeMemory="" debug.view.AnalogPins="" arduino.upload.port="COM3" debug.view.DigitalPins="" VM.DebugVariablesWindow.ColumnVisibleFunctionName="1" />
     </VisualStudio>
   </ProjectExtensions>
 </Project>
