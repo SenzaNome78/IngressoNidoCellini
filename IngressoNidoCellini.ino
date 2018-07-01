@@ -34,9 +34,12 @@ String SendDataToWebServer(String userSerial,
 String AttivaModScrittura(String nomeNuovoBadge, String ruoloNuovoBadge, String sessoNuovoBadge);
 
 // Variabili temporali per l'attesa nella scrittura badge e
-// nel collegarsi alla rete WIFI
+// nel collegarsi alla rete WIFI.
+// Il tempo totale è espresso in millisecondi.
+// Per ottenere circa un minuto di tempo reale ho dovuto inserire la metà dei
+//  millisecondi a causa delle latenze provocate dalle funzioni usate
 long tempoAttesaBadgeXScrittura = 0;
-const long tempoTotaleAttesaBadgeXScrittura = 60000;
+const long tempoTotaleAttesaBadgeXScrittura = 30000; // Circa un minuto
 
 /* FINE DICHIARAZIONI VARIABILI E FUNZIONI */
 
@@ -82,9 +85,9 @@ void setup()
 		LcdPrintCentered("collegamento", 1, true, lcd);
 		LcdPrintCentered(" con la rete.", 2, true, lcd);
 		LcdPrintCentered("Attendere prego.", 3, true, lcd);
-		tempoAttesaBadgeXScrittura -= 500;
+		tempoAttesaBadgeXScrittura -= 200;
 
-		delay(500);
+		delay(200);
 		Serial.print(".");
 	}
 
@@ -360,7 +363,6 @@ String AttivaModScrittura(String nomeNuovoBadge, String ruoloNuovoBadge, String 
 
 	while (tempoAttesaBadgeXScrittura > 0)
 	{
-		InterrServer.handleClient();
 
 		// Rileviamo e tentiamo di scrivere il nuovo badge
 		uint8_t rispostaScrittura = rfid.ScriviNuovoBadge(nomeNuovoBadge, ruoloNuovoBadge, sessoNuovoBadge);
@@ -411,7 +413,7 @@ String AttivaModScrittura(String nomeNuovoBadge, String ruoloNuovoBadge, String 
 			delay(lcdPause);
 			break;
 		}
-		
+		InterrServer.handleClient(); // Aspetta un eventuale interruzione da parte dell'utente
 	}
 
 	// Se il tempo per registrare il badge è finito
