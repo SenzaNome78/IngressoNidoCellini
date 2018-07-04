@@ -1,10 +1,3 @@
-/*
- * LettoreRfid.h
- *
- *  Created on: 21 mag 2018
- *      Author: David
- */
-
 #include <Arduino.h>
 #include "IngressiNidoHelper.h"
 #include <MFRC522.h>
@@ -59,6 +52,7 @@ public:
 
 	// Svuota l'array delle presenze
 	void AzzeraPresenze();
+
 private:
 	// Inizio membri e loro metodi di accesso (privati)
 
@@ -104,9 +98,6 @@ private:
 	// restituisce la stringa contenuta nel blocco
 	String LeggiBlocco(byte block);
 
-
-
-
 	// Registra una nuova presenza se non già inserita
 	// NuovaRilevazione viene impostata true o false se
 	// si tratta di un nuovo inserimento o meno
@@ -114,7 +105,6 @@ private:
 
 	// Imposta i membri temporanei come stringhe vuote
 	void resetMembers();
-
 };
 
 

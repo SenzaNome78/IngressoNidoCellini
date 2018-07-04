@@ -1,6 +1,4 @@
-
 #include "LettoreRfid.h"
-
 
 MFRC522::StatusCode status;	// Status code dal lettore
 
@@ -114,7 +112,6 @@ String LettoreRfid::LeggiBlocco(byte numBlocco)
 		}
 	}
 	return tmpString;
-
 }
 
 // Registra una nuova presenza se non già inserita
@@ -239,9 +236,9 @@ bool LettoreRfid::SetIdPresenza(String seriale, String idPresenza)
 			return true;
 		}
 	}
-
 	return false;
 }
+
 // Scrive un blocco di memoria in un badge
 // block è il numero del blocco da scrivere
 // stringa è la stringa che vogliamo memorizzare
@@ -289,6 +286,33 @@ bool LettoreRfid::ScriviBlocco(byte block, String stringa)
 	return true;
 }
 
+
+// Cancella un seriale dall'array
+void LettoreRfid::CancellaSerialeOggi(String seriale)
+{
+	for (byte i = 0; i < MAX_USERS; i++)
+	{
+		if (strArrayUid[i][0] == seriale)
+		{
+			strArrayUid[i][0] = "";
+			strArrayUid[i][1] = "";
+			return;
+		}
+	}
+}
+
+// Svuota l'array delle presenze
+void LettoreRfid::AzzeraPresenze()
+{
+	resetMembers();
+	for (byte i = 0; i < MAX_USERS; i++)
+	{
+		//Serial.println(strArrayUid[i][0]);
+		strArrayUid[i][0] = "";
+		strArrayUid[i][1] = "";
+	}
+}
+
 // Imposta i membri temporanei come stringhe vuote
 void LettoreRfid::resetMembers()
 {
@@ -298,6 +322,10 @@ void LettoreRfid::resetMembers()
 	serialeCorrente = "";
 }
 
+/*********************************************
+/ Da qui in poi iniziano i metodi di accesso *
+/ ai membri privati.						 *
+/*********************************************/
 
 LettoreRfid::~LettoreRfid()
 {
@@ -338,32 +366,6 @@ void LettoreRfid::setSessoUser(String sessoUser)
 bool LettoreRfid::isNuovaRilevazione()
 {
 	return NuovaRilevazione;
-}
-
-// Cancella un seriale dall'array
-void LettoreRfid::CancellaSerialeOggi(String seriale)
-{
-	for (byte i = 0; i < MAX_USERS; i++)
-	{
-		if (strArrayUid[i][0] == seriale)
-		{
-			strArrayUid[i][0] = "";
-			strArrayUid[i][1] = "";
-			return;
-		}
-	}
-}
-
-// Svuota l'array delle presenze
-void LettoreRfid::AzzeraPresenze()
-{
-	resetMembers();
-	for (byte i = 0; i < MAX_USERS; i++)
-	{
-		//Serial.println(strArrayUid[i][0]);
-		strArrayUid[i][0] = "";
-		strArrayUid[i][1] = "";
-	}
 }
 
 bool LettoreRfid::GetBadgeDaRegistrare()
